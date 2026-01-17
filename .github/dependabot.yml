@@ -6,9 +6,12 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
-    open-pull-requests-limit: 5
     commit-message:
       prefix: "deps(go):"
+    groups:
+      go-all:
+        patterns:
+          - "*"
 
   # Frontend npm dependencies
   - package-ecosystem: "npm"
@@ -16,9 +19,12 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
-    open-pull-requests-limit: 5
     commit-message:
       prefix: "deps(npm):"
+    groups:
+      npm-all:
+        patterns:
+          - "*"
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
@@ -26,9 +32,12 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
-    open-pull-requests-limit: 3
     commit-message:
       prefix: "deps(actions):"
+    groups:
+      actions-all:
+        patterns:
+          - "*"
 
   # Docker base images
   - package-ecosystem: "docker"
@@ -38,6 +47,10 @@ updates:
       day: "monday"
     commit-message:
       prefix: "deps(docker):"
+    groups:
+      docker-backend:
+        patterns:
+          - "*"
 
   - package-ecosystem: "docker"
     directory: "/frontend"
@@ -46,3 +59,7 @@ updates:
       day: "monday"
     commit-message:
       prefix: "deps(docker):"
+    groups:
+      docker-frontend:
+        patterns:
+          - "*"
