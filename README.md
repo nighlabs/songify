@@ -173,6 +173,31 @@ The frontend runs on `http://localhost:5173`.
 |----------|-------------|
 | `VITE_SPOTIFY_CLIENT_ID` | Spotify app client ID for PKCE auth |
 
+## CI/CD
+
+This project uses GitHub Actions for continuous integration and deployment.
+
+### Pull Requests
+
+All PRs automatically run:
+- Backend tests (`go test`)
+- Backend build verification
+- Frontend tests (`vitest`)
+- Frontend linting (`eslint`)
+- Frontend build verification
+
+### Docker Images
+
+On merge to `main` or version tags, Docker images are built and pushed to GitHub Container Registry:
+
+```bash
+# Pull latest images
+docker pull ghcr.io/OWNER/REPO/backend:main
+docker pull ghcr.io/OWNER/REPO/frontend:main
+```
+
+See [GITHUB_SETUP.md](.github/GITHUB_SETUP.md) for repository configuration details.
+
 ## Project Structure
 
 ```
