@@ -1,0 +1,414 @@
+import { useState, useEffect } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import {
+  Music,
+  Search,
+  Check,
+  X,
+  Clock,
+  Share2,
+  LogOut,
+  Loader2,
+  Plus,
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { api } from '@/services/api'
+import { useAuthStore } from '@/stores/authStore'
+import type { Session, SongRequest, SpotifyTrack } from '@/types'
+import {
+  authenticateSpotify,
+  isSpotifyAuthenticated,
+  addTrackToPlaylist,
+} from '@/services/spotify'
+
+function formatDuration(ms: number): string {
+  const minutes = Math.floor(ms / 60000)
+  const seconds = Math.floor((ms % 60000) / 1000)
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`
+}
+
+function StatusBadge({ status }: { status: string }) {
+  switch (status) {
+    case 'pending':
+      return (
+        <Badge variant="warning" className="flex items-center gap-1">
+          <Clock className="h-3 w-3" />
+          Pending
+        </Badge>
+      )
+    case 'approved':
+      return (
+        <Badge variant="success" className="flex items-center gap-1">
+          <Check className="h-3 w-3" />
+          Approved
+        </Badge>
+      )
+    case 'rejected':
+      return (
+        <Badge variant="destructive" className="flex items-center gap-1">
+          <X className="h-3 w-3" />
+          Rejected
+        </Badge>
+      )
+    default:
+      return null
+  }
+}
+
+export function SessionPage() {
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const { isAdmin, friendAccessKey, logout, sessionId } = useAuthStore()
+
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<SpotifyTrack[]>([])
+  const [isSearching, setIsSearching] = useState(false)
+  const [copiedKey, setCopiedKey] = useState(false)
+
+  // Redirect if not authenticated or wrong session
+  useEffect(() => {
+    if (!sessionId || sessionId !== id) {
+      navigate('/')
+    }
+  }, [sessionId, id, navigate])
+
+  // Fetch session details
+  const { data: session, isLoading: sessionLoading } = useQuery<Session>({
+    queryKey: ['session', id],
+    queryFn: () => api.getSession(id!),
+    enabled: !!id,
+  })
+
+  // Fetch song requests with polling
+  const { data: requests = [], isLoading: requestsLoading } = useQuery<SongRequest[]>({
+    queryKey: ['requests', id],
+    queryFn: () => api.getSongRequests(id!),
+    enabled: !!id,
+    refetchInterval: 5000,
+  })
+
+  // Submit request mutation
+  const submitMutation = useMutation({
+    mutationFn: (track: SpotifyTrack) => api.submitSongRequest(id!, track),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['requests', id] })
+      setSearchQuery('')
+      setSearchResults([])
+    },
+  })
+
+  // Approve mutation
+  const approveMutation = useMutation({
+    mutationFn: async (requestId: number) => {
+      const result = await api.approveSongRequest(id!, requestId)
+      // Try to add to Spotify playlist
+      if (session?.spotifyPlaylistId && isSpotifyAuthenticated()) {
+        const request = requests.find((r) => r.id === requestId)
+        if (request) {
+          try {
+            await addTrackToPlaylist(session.spotifyPlaylistId, request.spotifyUri)
+          } catch (e) {
+            console.error('Failed to add to playlist:', e)
+          }
+        }
+      }
+      return result
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['requests', id] })
+    },
+  })
+
+  // Reject mutation
+  const rejectMutation = useMutation({
+    mutationFn: (requestId: number) => api.rejectSongRequest(id!, requestId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['requests', id] })
+    },
+  })
+
+  // Search handler
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) return
+
+    setIsSearching(true)
+    try {
+      const response = await api.searchSpotify(searchQuery)
+      setSearchResults(response.tracks)
+    } catch (e) {
+      console.error('Search failed:', e)
+    } finally {
+      setIsSearching(false)
+    }
+  }
+
+  // Copy access key
+  const handleCopyKey = () => {
+    if (friendAccessKey) {
+      navigator.clipboard.writeText(friendAccessKey)
+      setCopiedKey(true)
+      setTimeout(() => setCopiedKey(false), 2000)
+    }
+  }
+
+  // Handle logout
+  const handleLogout = () => {
+    logout()
+    navigate('/')
+  }
+
+  // Spotify auth for admin
+  const handleSpotifyAuth = async () => {
+    try {
+      await authenticateSpotify()
+    } catch (e) {
+      console.error('Spotify auth failed:', e)
+    }
+  }
+
+  if (sessionLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
+  const pendingRequests = requests.filter((r) => r.status === 'pending')
+  const processedRequests = requests.filter((r) => r.status !== 'pending')
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-violet-50 to-pink-50">
+      {/* Header */}
+      <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm border-b">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Music className="h-6 w-6 text-primary" />
+              <h1 className="text-xl font-semibold">{session?.displayName}</h1>
+              {isAdmin && <Badge variant="secondary">Admin</Badge>}
+            </div>
+            <div className="flex items-center gap-2">
+              {isAdmin && friendAccessKey && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCopyKey}
+                  className="flex items-center gap-1"
+                >
+                  <Share2 className="h-4 w-4" />
+                  {copiedKey ? 'Copied!' : friendAccessKey}
+                </Button>
+              )}
+              <Button variant="ghost" size="icon" onClick={handleLogout}>
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="container mx-auto px-4 py-6 space-y-6">
+        {/* Admin Spotify Connect */}
+        {isAdmin && !isSpotifyAuthenticated() && (
+          <Card className="bg-green-50 border-green-200">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-medium">Connect to Spotify</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Connect your Spotify account to add approved songs to your playlist
+                  </p>
+                </div>
+                <Button onClick={handleSpotifyAuth} className="bg-green-600 hover:bg-green-700">
+                  Connect Spotify
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Search Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Search className="h-5 w-5" />
+              Search Songs
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Search for a song..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              />
+              <Button onClick={handleSearch} disabled={isSearching}>
+                {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Search'}
+              </Button>
+            </div>
+
+            {/* Search Results */}
+            {searchResults.length > 0 && (
+              <div className="mt-4 space-y-2">
+                {searchResults.map((track) => (
+                  <div
+                    key={track.id}
+                    className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                  >
+                    {track.albumArtUrl && (
+                      <img
+                        src={track.albumArtUrl}
+                        alt={track.albumName}
+                        className="w-12 h-12 rounded"
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{track.name}</p>
+                      <p className="text-sm text-muted-foreground truncate">
+                        {track.artists.join(', ')} • {track.albumName}
+                      </p>
+                    </div>
+                    <span className="text-sm text-muted-foreground">
+                      {formatDuration(track.durationMs)}
+                    </span>
+                    <Button
+                      size="sm"
+                      onClick={() => submitMutation.mutate(track)}
+                      disabled={submitMutation.isPending}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Pending Requests */}
+        {pendingRequests.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Pending Requests ({pendingRequests.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {pendingRequests.map((request) => (
+                  <div
+                    key={request.id}
+                    className="flex items-center gap-3 p-3 rounded-lg bg-yellow-50 border border-yellow-200"
+                  >
+                    {request.albumArtUrl && (
+                      <img
+                        src={request.albumArtUrl}
+                        alt={request.albumName}
+                        className="w-12 h-12 rounded"
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{request.trackName}</p>
+                      <p className="text-sm text-muted-foreground truncate">
+                        {request.artistNames} • {request.albumName}
+                      </p>
+                    </div>
+                    <span className="text-sm text-muted-foreground">
+                      {formatDuration(request.durationMs)}
+                    </span>
+                    <StatusBadge status={request.status} />
+                    {isAdmin && (
+                      <div className="flex gap-1">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="text-green-600 hover:bg-green-100"
+                          onClick={() => approveMutation.mutate(request.id)}
+                          disabled={approveMutation.isPending}
+                        >
+                          <Check className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="text-red-600 hover:bg-red-100"
+                          onClick={() => rejectMutation.mutate(request.id)}
+                          disabled={rejectMutation.isPending}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Processed Requests */}
+        {processedRequests.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Request History</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {processedRequests.map((request) => (
+                  <div
+                    key={request.id}
+                    className={`flex items-center gap-3 p-3 rounded-lg ${
+                      request.status === 'approved'
+                        ? 'bg-green-50 border border-green-200'
+                        : 'bg-red-50 border border-red-200'
+                    }`}
+                  >
+                    {request.albumArtUrl && (
+                      <img
+                        src={request.albumArtUrl}
+                        alt={request.albumName}
+                        className="w-12 h-12 rounded"
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{request.trackName}</p>
+                      <p className="text-sm text-muted-foreground truncate">
+                        {request.artistNames}
+                      </p>
+                      {request.rejectionReason && (
+                        <p className="text-xs text-red-600 mt-1">
+                          Reason: {request.rejectionReason}
+                        </p>
+                      )}
+                    </div>
+                    <StatusBadge status={request.status} />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {requests.length === 0 && !requestsLoading && (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <Music className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium">No song requests yet</h3>
+              <p className="text-muted-foreground">
+                Search for songs above to make your first request!
+              </p>
+            </CardContent>
+          </Card>
+        )}
+      </main>
+    </div>
+  )
+}
