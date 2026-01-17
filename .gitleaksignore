@@ -1,7 +1,13 @@
 # Intentional placeholder values in example files and dev defaults
 # These are not real secrets - they are meant to be replaced by users
 
-# .env.example placeholder values
+# Root .env.example (Docker Compose)
+.env.example:JWT_SECRET=generate-a-secure-random-string-here
+.env.example:ADMIN_PORTAL_PASSWORD=choose-a-strong-password
+.env.example:SPOTIFY_CLIENT_ID=your-spotify-client-id
+.env.example:SPOTIFY_CLIENT_SECRET=your-spotify-client-secret
+
+# backend/.env.example placeholder values
 backend/.env.example:JWT_SECRET=change-this-to-a-secure-random-string
 backend/.env.example:ADMIN_PORTAL_PASSWORD=admin123
 backend/.env.example:SPOTIFY_CLIENT_ID=your-spotify-client-id

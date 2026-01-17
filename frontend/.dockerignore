@@ -1,0 +1,29 @@
+# Git
+.git
+.gitignore
+
+# Dependencies (will be installed fresh in container)
+node_modules
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Local env files
+.env
+.env.local
+.env.*.local
+
+# Build artifacts (will be built in container)
+dist
+
+# Documentation
+*.md
+LICENSE
+
+# Test files
+coverage
+*.test.*
+*.spec.*

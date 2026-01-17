@@ -31,18 +31,54 @@ A collaborative playlist request app where friends can search for songs and subm
 
 ### Prerequisites
 
+**For Docker deployment:**
+- Docker and Docker Compose
+
+**For local development:**
 - Go 1.21+
 - Node.js 18+
+
+**Both require:**
 - A [Spotify Developer](https://developer.spotify.com/dashboard) application
 
 ### Spotify Setup
 
 1. Go to the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
 2. Create a new application
-3. Add `http://localhost:5173/callback` to Redirect URIs
+3. Add redirect URIs:
+   - `http://localhost:5173/callback` (local development)
+   - `http://localhost:3000/callback` (Docker)
+   - Your production URL + `/callback` if deploying
 4. Note your Client ID and Client Secret
 
-### Backend Setup
+### Docker Deployment (Recommended)
+
+```bash
+# Copy and edit environment file
+cp .env.example .env
+
+# Edit .env with your values (all are required):
+# - JWT_SECRET
+# - ADMIN_PORTAL_PASSWORD
+# - SPOTIFY_CLIENT_ID
+# - SPOTIFY_CLIENT_SECRET
+
+# Build and start containers
+docker compose up -d
+
+# View logs
+docker compose logs -f
+```
+
+The app will be available at `http://localhost:3000`.
+
+To stop: `docker compose down`
+
+To stop and remove data: `docker compose down -v`
+
+### Local Development
+
+#### Backend Setup
 
 ```bash
 cd backend
@@ -62,7 +98,7 @@ go run ./cmd/server
 
 The backend runs on `http://localhost:8080`.
 
-### Frontend Setup
+#### Frontend Setup
 
 ```bash
 cd frontend
