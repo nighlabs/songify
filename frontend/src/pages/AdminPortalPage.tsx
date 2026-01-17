@@ -30,7 +30,7 @@ export function AdminPortalPage() {
       } else {
         setError('Invalid password')
       }
-    } catch (err) {
+    } catch {
       setError('Failed to verify password')
     } finally {
       setLoading(false)

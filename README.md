@@ -106,17 +106,13 @@ cd frontend
 # Install dependencies
 npm install
 
-# Copy and edit environment file
-cp .env.example .env
-
-# Edit .env:
-# - VITE_SPOTIFY_CLIENT_ID (same as backend)
-
 # Start dev server
 npm run dev
 ```
 
 The frontend runs on `http://localhost:5173`.
+
+> **Note**: The frontend fetches the Spotify Client ID from the backend at runtime via the `/api/config` endpoint, so no environment variables are needed.
 
 ## Usage
 
@@ -150,6 +146,7 @@ The frontend runs on `http://localhost:5173`.
 | PUT | `/api/sessions/{id}/requests/{rid}/approve` | Admin | Approve request |
 | PUT | `/api/sessions/{id}/requests/{rid}/reject` | Admin | Reject request |
 | GET | `/api/spotify/search` | Rate limited | Search Spotify |
+| GET | `/api/config` | None | Get public configuration |
 
 ## Configuration
 
@@ -167,11 +164,30 @@ The frontend runs on `http://localhost:5173`.
 | `FRIEND_TOKEN_DURATION` | `12h` | Friend JWT validity |
 | `RATE_LIMIT_PER_MINUTE` | `10` | Search rate limit per IP |
 
-### Frontend Environment Variables
+## CI/CD
 
-| Variable | Description |
-|----------|-------------|
-| `VITE_SPOTIFY_CLIENT_ID` | Spotify app client ID for PKCE auth |
+This project uses GitHub Actions for continuous integration and deployment.
+
+### Pull Requests
+
+All PRs automatically run:
+- Backend tests (`go test`)
+- Backend build verification
+- Frontend tests (`vitest`)
+- Frontend linting (`eslint`)
+- Frontend build verification
+
+### Docker Images
+
+On merge to `main` or version tags, Docker images are built and pushed to GitHub Container Registry:
+
+```bash
+# Pull latest images
+docker pull ghcr.io/OWNER/REPO/backend:main
+docker pull ghcr.io/OWNER/REPO/frontend:main
+```
+
+See [GITHUB_SETUP.md](.github/GITHUB_SETUP.md) for repository configuration details.
 
 ## Project Structure
 

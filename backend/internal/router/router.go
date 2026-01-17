@@ -28,6 +28,7 @@ func New(cfg *config.Config, queries *db.Queries) http.Handler {
 
 	// Handlers
 	adminHandler := handlers.NewAdminHandler(cfg)
+	configHandler := handlers.NewConfigHandler(cfg)
 	sessionHandler := handlers.NewSessionHandler(queries, authService, friendKeyService)
 	requestHandler := handlers.NewRequestHandler(queries)
 	spotifyHandler := handlers.NewSpotifyHandler(spotifyService)
@@ -42,6 +43,9 @@ func New(cfg *config.Config, queries *db.Queries) http.Handler {
 			w.Header().Set("Content-Type", "application/json")
 			w.Write([]byte(`{"status":"ok"}`))
 		})
+
+		// Public configuration (Spotify client ID, etc.)
+		r.Get("/config", configHandler.PublicConfig)
 
 		// Admin portal verification (no auth required)
 		r.Post("/admin/verify", adminHandler.VerifyPassword)

@@ -29,7 +29,7 @@ export function HomePage() {
       const response = await api.joinSession(friendKey.trim().toLowerCase())
       setFriendAuth(response.token, response.sessionId, response.displayName)
       navigate(`/session/${response.sessionId}`)
-    } catch (err) {
+    } catch {
       setError('Invalid access key. Please check and try again.')
     } finally {
       setLoading(false)

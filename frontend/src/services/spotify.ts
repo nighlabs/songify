@@ -1,6 +1,6 @@
 import { SpotifyApi } from '@spotify/web-api-ts-sdk'
+import { getConfig, getCachedConfig } from './config'
 
-const SPOTIFY_CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID || ''
 const REDIRECT_URI = `${window.location.origin}/callback`
 const SCOPES = [
   'playlist-read-private',
@@ -11,17 +11,15 @@ const SCOPES = [
 
 let spotifyApi: SpotifyApi | null = null
 
-export function getSpotifyApi(): SpotifyApi | null {
-  return spotifyApi
-}
-
 export async function initSpotifyAuth(): Promise<SpotifyApi> {
   if (spotifyApi) {
     return spotifyApi
   }
 
+  const config = await getConfig()
+
   spotifyApi = SpotifyApi.withUserAuthorization(
-    SPOTIFY_CLIENT_ID,
+    config.spotifyClientId,
     REDIRECT_URI,
     SCOPES
   )
@@ -56,9 +54,11 @@ export async function addTrackToPlaylist(playlistId: string, trackUri: string) {
 }
 
 export async function handleSpotifyCallback(): Promise<void> {
+  const config = getCachedConfig() || await getConfig()
+
   if (!spotifyApi) {
     spotifyApi = SpotifyApi.withUserAuthorization(
-      SPOTIFY_CLIENT_ID,
+      config.spotifyClientId,
       REDIRECT_URI,
       SCOPES
     )

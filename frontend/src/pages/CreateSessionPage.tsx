@@ -56,7 +56,7 @@ export function CreateSessionPage() {
         response.friendAccessKey
       )
       navigate(`/session/${response.sessionId}`)
-    } catch (err) {
+    } catch {
       setError('Failed to create session')
     } finally {
       setLoading(false)

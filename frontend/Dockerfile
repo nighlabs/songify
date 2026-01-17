@@ -10,10 +10,6 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build argument for Spotify Client ID (needed at build time for Vite)
-ARG VITE_SPOTIFY_CLIENT_ID
-ENV VITE_SPOTIFY_CLIENT_ID=$VITE_SPOTIFY_CLIENT_ID
-
 # Build the application
 RUN npm run build
 
