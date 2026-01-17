@@ -17,7 +17,7 @@ COPY . .
 RUN CGO_ENABLED=1 GOOS=linux go build -o server ./cmd/server
 
 # Runtime stage
-FROM alpine:3.20
+FROM alpine:3.23
 
 WORKDIR /app
 
