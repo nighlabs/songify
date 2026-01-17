@@ -40,7 +40,7 @@ export function RejoinSessionPage() {
         response.friendAccessKey
       )
       navigate(`/session/${response.sessionId}`)
-    } catch (err) {
+    } catch {
       setError('Invalid credentials. Please check your name and password.')
     } finally {
       setLoading(false)
