@@ -28,15 +28,7 @@ jobs:
         run: go mod download
 
       - name: Run tests
-        run: go test -v -coverprofile=coverage.out ./...
-
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
-        if: github.event_name == 'push'
-        with:
-          file: backend/coverage.out
-          flags: backend
-        continue-on-error: true
+        run: go test -v ./...
 
   backend-build:
     name: Backend Build
