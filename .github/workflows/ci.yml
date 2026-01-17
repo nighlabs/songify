@@ -129,5 +129,3 @@ jobs:
 
       - name: Build
         run: npm run build
-        env:
-          VITE_SPOTIFY_CLIENT_ID: placeholder-for-build-test

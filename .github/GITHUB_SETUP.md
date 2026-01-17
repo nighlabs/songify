@@ -29,18 +29,6 @@ This document describes how to configure the GitHub repository for Songify.
        - `Frontend Build`
    - **Do not allow bypassing the above settings**
 
-### Repository Variables
-
-For the Docker publish workflow to include the Spotify Client ID:
-
-1. Go to **Settings** > **Secrets and variables** > **Actions**
-2. Click the **Variables** tab
-3. Add a repository variable:
-   - Name: `SPOTIFY_CLIENT_ID`
-   - Value: Your Spotify application's Client ID
-
-Note: The `GITHUB_TOKEN` is automatically provided and has permissions to push to GHCR.
-
 ### Packages (Container Registry)
 
 Images are automatically published to GitHub Container Registry (ghcr.io) on:

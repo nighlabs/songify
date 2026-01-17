@@ -23,10 +23,7 @@ services:
       start_period: 5s
 
   frontend:
-    build:
-      context: ./frontend
-      args:
-        - VITE_SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID:?SPOTIFY_CLIENT_ID is required}
+    build: ./frontend
     container_name: songify-frontend
     restart: unless-stopped
     ports:
