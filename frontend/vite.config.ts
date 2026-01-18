@@ -10,9 +10,11 @@ export default defineConfig({
     },
   },
   server: {
+    // Use 127.0.0.1 instead of localhost (Spotify doesn't allow localhost as redirect URI)
+    host: '127.0.0.1',
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'http://127.0.0.1:8080',
         changeOrigin: true,
       },
     },

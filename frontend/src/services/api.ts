@@ -128,6 +128,13 @@ export const api = {
   searchSpotify: async (query: string): Promise<{ tracks: SpotifyTrack[] }> => {
     return request(`/spotify/search?q=${encodeURIComponent(query)}`)
   },
+
+  updateSessionPlaylist: async (sessionId: string, spotifyPlaylistId: string): Promise<void> => {
+    return request(`/sessions/${sessionId}/playlist`, {
+      method: 'PUT',
+      body: JSON.stringify({ spotifyPlaylistId }),
+    })
+  },
 }
 
 export { ApiError }
