@@ -600,6 +600,9 @@ export function SessionPage() {
                         </p>
                       )}
                     </div>
+                    <span className="text-sm text-muted-foreground">
+                      {formatDuration(request.durationMs)}
+                    </span>
                     <StatusBadge status={request.status} />
                   </div>
                 ))}
