@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { api } from '@/services/api'
-import { hashPassword } from '@/services/crypto'
+import { hashPassword, hashFriendKey } from '@/services/crypto'
 import { useAuthStore } from '@/stores/authStore'
 
 export function RejoinSessionPage() {
@@ -31,8 +31,9 @@ export function RejoinSessionPage() {
     setError('')
 
     try {
+      const friendKeyHash = await hashFriendKey(friendAccessKey)
       const passwordHash = await hashPassword(password, adminName)
-      const response = await api.rejoinSession(friendAccessKey, passwordHash)
+      const response = await api.rejoinSession(friendKeyHash, passwordHash)
 
       setAdminAuth(
         response.token,

@@ -52,10 +52,10 @@ async function request<T>(
 
 export const api = {
   // Admin portal
-  verifyAdminPassword: async (password: string): Promise<{ valid: boolean }> => {
+  verifyAdminPassword: async (passwordHash: string): Promise<{ valid: boolean }> => {
     return request('/admin/verify', {
       method: 'POST',
-      body: JSON.stringify({ password }),
+      body: JSON.stringify({ passwordHash }),
     })
   },
 
@@ -67,17 +67,17 @@ export const api = {
     })
   },
 
-  joinSession: async (friendAccessKey: string): Promise<JoinSessionResponse> => {
+  joinSession: async (friendKeyHash: string): Promise<JoinSessionResponse> => {
     return request('/sessions/join', {
       method: 'POST',
-      body: JSON.stringify({ friendAccessKey }),
+      body: JSON.stringify({ friendKeyHash }),
     })
   },
 
-  rejoinSession: async (friendAccessKey: string, adminPasswordHash: string): Promise<RejoinSessionResponse> => {
+  rejoinSession: async (friendKeyHash: string, adminPasswordHash: string): Promise<RejoinSessionResponse> => {
     return request('/sessions/rejoin', {
       method: 'POST',
-      body: JSON.stringify({ friendAccessKey, adminPasswordHash }),
+      body: JSON.stringify({ friendKeyHash, adminPasswordHash }),
     })
   },
 

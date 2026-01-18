@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
+	"time"
 
 	"github.com/songify/backend/internal/config"
 	"github.com/songify/backend/internal/models"
@@ -17,20 +19,27 @@ func TestAdminHandler_VerifyPassword(t *testing.T) {
 	}
 	handler := NewAdminHandler(cfg)
 
+	// Get the current UTC day for salt
+	utcDay := strconv.Itoa(time.Now().UTC().Day())
+
+	// Generate the correct hash for the test password
+	correctHash := hashWithScrypt("test-password", utcDay)
+	wrongHash := hashWithScrypt("wrong-password", utcDay)
+
 	tests := []struct {
 		name           string
-		password       string
+		passwordHash   string
 		expectedValid  bool
 		expectedStatus int
 	}{
-		{"correct password", "test-password", true, http.StatusOK},
-		{"wrong password", "wrong-password", false, http.StatusOK},
-		{"empty password", "", false, http.StatusOK},
+		{"correct password hash", correctHash, true, http.StatusOK},
+		{"wrong password hash", wrongHash, false, http.StatusOK},
+		{"empty hash", "", false, http.StatusOK},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			body, _ := json.Marshal(models.VerifyAdminRequest{Password: tt.password})
+			body, _ := json.Marshal(models.VerifyAdminRequest{PasswordHash: tt.passwordHash})
 			req := httptest.NewRequest(http.MethodPost, "/api/admin/verify", bytes.NewReader(body))
 			req.Header.Set("Content-Type", "application/json")
 			rec := httptest.NewRecorder()

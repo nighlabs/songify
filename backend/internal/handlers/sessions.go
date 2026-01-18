@@ -2,9 +2,12 @@ package handlers
 
 import (
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -12,6 +15,7 @@ import (
 	"github.com/songify/backend/internal/middleware"
 	"github.com/songify/backend/internal/models"
 	"github.com/songify/backend/internal/services"
+	"golang.org/x/crypto/scrypt"
 )
 
 type SessionHandler struct {
@@ -26,6 +30,22 @@ func NewSessionHandler(queries *db.Queries, authService *services.AuthService, f
 		authService:      authService,
 		friendKeyService: friendKeyService,
 	}
+}
+
+// hashFriendKey hashes a friend key using scrypt with UTC day as salt
+// Parameters match the frontend: N=16384, r=8, p=1, keyLen=32
+func hashFriendKey(friendKey string) string {
+	// Normalize the key the same way as frontend
+	normalizedKey := strings.ToLower(strings.TrimSpace(friendKey))
+	// Use UTC day as salt (same as admin portal password)
+	utcDay := strconv.Itoa(time.Now().UTC().Day())
+	saltBytes := []byte(utcDay)
+	// N=16384 (2^14), r=8, p=1, keyLen=32
+	dk, err := scrypt.Key([]byte(normalizedKey), saltBytes, 16384, 8, 1, 32)
+	if err != nil {
+		return ""
+	}
+	return hex.EncodeToString(dk)
 }
 
 func (h *SessionHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -111,26 +131,40 @@ func (h *SessionHandler) Join(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.FriendAccessKey == "" {
-		writeError(w, http.StatusBadRequest, "friendAccessKey is required")
+	if req.FriendKeyHash == "" {
+		writeError(w, http.StatusBadRequest, "friendKeyHash is required")
 		return
 	}
 
-	session, err := h.queries.GetSessionByFriendKey(r.Context(), req.FriendAccessKey)
+	// Find session by comparing hashed friend keys
+	sessions, err := h.queries.ListAllSessions(r.Context())
 	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to fetch sessions")
+		return
+	}
+
+	var matchedSession *db.Session
+	for i := range sessions {
+		if hashFriendKey(sessions[i].FriendAccessKey) == req.FriendKeyHash {
+			matchedSession = &sessions[i]
+			break
+		}
+	}
+
+	if matchedSession == nil {
 		writeError(w, http.StatusNotFound, "session not found")
 		return
 	}
 
-	token, err := h.authService.GenerateToken(session.ID, services.RoleFriend)
+	token, err := h.authService.GenerateToken(matchedSession.ID, services.RoleFriend)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to generate token")
 		return
 	}
 
 	writeJSON(w, http.StatusOK, models.JoinSessionResponse{
-		SessionID:   session.ID,
-		DisplayName: session.DisplayName,
+		SessionID:   matchedSession.ID,
+		DisplayName: matchedSession.DisplayName,
 		Token:       token,
 	})
 }
@@ -142,33 +176,47 @@ func (h *SessionHandler) Rejoin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.FriendAccessKey == "" || req.AdminPasswordHash == "" {
-		writeError(w, http.StatusBadRequest, "friendAccessKey and adminPasswordHash are required")
+	if req.FriendKeyHash == "" || req.AdminPasswordHash == "" {
+		writeError(w, http.StatusBadRequest, "friendKeyHash and adminPasswordHash are required")
 		return
 	}
 
-	session, err := h.queries.GetSessionByFriendKey(r.Context(), req.FriendAccessKey)
+	// Find session by comparing hashed friend keys
+	sessions, err := h.queries.ListAllSessions(r.Context())
 	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to fetch sessions")
+		return
+	}
+
+	var matchedSession *db.Session
+	for i := range sessions {
+		if hashFriendKey(sessions[i].FriendAccessKey) == req.FriendKeyHash {
+			matchedSession = &sessions[i]
+			break
+		}
+	}
+
+	if matchedSession == nil {
 		writeError(w, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
 
 	// Verify the admin password
-	if session.AdminPasswordHash != req.AdminPasswordHash {
+	if matchedSession.AdminPasswordHash != req.AdminPasswordHash {
 		writeError(w, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
 
-	token, err := h.authService.GenerateToken(session.ID, services.RoleAdmin)
+	token, err := h.authService.GenerateToken(matchedSession.ID, services.RoleAdmin)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to generate token")
 		return
 	}
 
 	writeJSON(w, http.StatusOK, models.RejoinSessionResponse{
-		SessionID:       session.ID,
-		DisplayName:     session.DisplayName,
-		FriendAccessKey: session.FriendAccessKey,
+		SessionID:       matchedSession.ID,
+		DisplayName:     matchedSession.DisplayName,
+		FriendAccessKey: matchedSession.FriendAccessKey,
 		Token:           token,
 	})
 }

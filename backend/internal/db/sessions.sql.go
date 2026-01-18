@@ -143,6 +143,44 @@ func (q *Queries) GetSessionByID(ctx context.Context, id string) (Session, error
 	return i, err
 }
 
+const listAllSessions = `-- name: ListAllSessions :many
+SELECT id, display_name, admin_name, admin_password_hash, friend_access_key, spotify_playlist_id, song_duration_limit_ms, created_at, updated_at, spotify_playlist_name FROM sessions
+`
+
+func (q *Queries) ListAllSessions(ctx context.Context) ([]Session, error) {
+	rows, err := q.db.QueryContext(ctx, listAllSessions)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Session
+	for rows.Next() {
+		var i Session
+		if err := rows.Scan(
+			&i.ID,
+			&i.DisplayName,
+			&i.AdminName,
+			&i.AdminPasswordHash,
+			&i.FriendAccessKey,
+			&i.SpotifyPlaylistID,
+			&i.SongDurationLimitMs,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.SpotifyPlaylistName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateSessionPlaylist = `-- name: UpdateSessionPlaylist :exec
 UPDATE sessions SET spotify_playlist_id = ?, spotify_playlist_name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
 `

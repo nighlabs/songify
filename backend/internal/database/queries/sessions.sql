@@ -23,3 +23,6 @@ DELETE FROM sessions WHERE id = ?;
 
 -- name: FriendKeyExists :one
 SELECT EXISTS(SELECT 1 FROM sessions WHERE friend_access_key = ?) AS exists_flag;
+
+-- name: ListAllSessions :many
+SELECT * FROM sessions;
