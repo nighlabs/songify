@@ -70,10 +70,12 @@ function StatusBadge({ status }: { status: string }) {
 
 function SpotifyStatus({
   playlistId,
+  playlistName,
   onConnect,
   onChangePlaylist
 }: {
   playlistId: string | null | undefined
+  playlistName: string | null | undefined
   onConnect: () => void
   onChangePlaylist: () => void
 }) {
@@ -83,35 +85,51 @@ function SpotifyStatus({
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (playlistId && isSpotifyAuthenticated()) {
+    let cancelled = false
+
+    // Reset state when playlist changes
+    setPlaylist(null)
+    setLoading(false)
+
+    if (!playlistId) {
+      return
+    }
+
+    // Set initial state with stored name while we fetch details
+    setPlaylist({
+      name: playlistName || 'Linked Playlist',
+      imageUrl: null,
+      externalUrl: `https://open.spotify.com/playlist/${playlistId}`,
+    })
+
+    // If authenticated with Spotify, fetch full details (including image)
+    if (isSpotifyAuthenticated()) {
       setLoading(true)
       getPlaylist(playlistId)
         .then((p) => {
-          setPlaylist({
-            name: p.name,
-            imageUrl: p.images?.[0]?.url || null,
-            externalUrl: p.external_urls.spotify,
-          })
+          if (!cancelled) {
+            setPlaylist({
+              name: p.name,
+              imageUrl: p.images?.[0]?.url || null,
+              externalUrl: p.external_urls.spotify,
+            })
+          }
         })
         .catch((e) => {
           console.error('Failed to fetch playlist:', e)
-          // Still show as connected even if we can't fetch details
-          setPlaylist({
-            name: 'Linked Playlist',
-            imageUrl: null,
-            externalUrl: `https://open.spotify.com/playlist/${playlistId}`,
-          })
+          // Keep the initial state with stored name
         })
-        .finally(() => setLoading(false))
-    } else if (playlistId) {
-      // Has playlist but not authenticated in this session
-      setPlaylist({
-        name: 'Linked Playlist',
-        imageUrl: null,
-        externalUrl: `https://open.spotify.com/playlist/${playlistId}`,
-      })
+        .finally(() => {
+          if (!cancelled) {
+            setLoading(false)
+          }
+        })
     }
-  }, [playlistId])
+
+    return () => {
+      cancelled = true
+    }
+  }, [playlistId, playlistName])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -162,7 +180,7 @@ function SpotifyStatus({
             <Music className="h-4 w-4 text-white" />
           </div>
         )}
-        <span className="text-sm font-medium text-green-800 max-w-[120px] truncate hidden sm:block">
+        <span className="text-sm font-medium text-green-800 max-w-[150px] truncate">
           {playlist?.name}
         </span>
       </button>
@@ -302,10 +320,12 @@ export function SessionPage() {
     navigate('/')
   }
 
-  // Spotify auth for admin
+  // Spotify auth for admin - triggers OAuth flow which redirects to /callback
   const handleSpotifyAuth = async () => {
     try {
       await authenticateSpotify()
+      // After authentication, navigate to callback to select playlist
+      navigate('/callback')
     } catch (e) {
       console.error('Spotify auth failed:', e)
     }
@@ -337,6 +357,7 @@ export function SessionPage() {
               {isAdmin && (
                 <SpotifyStatus
                   playlistId={session?.spotifyPlaylistId}
+                  playlistName={session?.spotifyPlaylistName}
                   onConnect={handleSpotifyAuth}
                   onChangePlaylist={handleSpotifyAuth}
                 />

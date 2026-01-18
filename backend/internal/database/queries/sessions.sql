@@ -13,7 +13,7 @@ SELECT * FROM sessions WHERE friend_access_key = ?;
 SELECT * FROM sessions WHERE admin_name = ? AND admin_password_hash = ?;
 
 -- name: UpdateSessionPlaylist :exec
-UPDATE sessions SET spotify_playlist_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?;
+UPDATE sessions SET spotify_playlist_id = ?, spotify_playlist_name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?;
 
 -- name: UpdateSessionSettings :exec
 UPDATE sessions SET song_duration_limit_ms = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?;

@@ -25,6 +25,7 @@ type Session struct {
 	SongDurationLimitMs sql.NullInt64  `json:"song_duration_limit_ms"`
 	CreatedAt           sql.NullTime   `json:"created_at"`
 	UpdatedAt           sql.NullTime   `json:"updated_at"`
+	SpotifyPlaylistName sql.NullString `json:"spotify_playlist_name"`
 }
 
 type SongRequest struct {
