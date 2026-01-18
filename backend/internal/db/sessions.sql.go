@@ -13,7 +13,7 @@ import (
 const createSession = `-- name: CreateSession :one
 INSERT INTO sessions (id, display_name, admin_name, admin_password_hash, friend_access_key, spotify_playlist_id, song_duration_limit_ms)
 VALUES (?, ?, ?, ?, ?, ?, ?)
-RETURNING id, display_name, admin_name, admin_password_hash, friend_access_key, spotify_playlist_id, song_duration_limit_ms, created_at, updated_at
+RETURNING id, display_name, admin_name, admin_password_hash, friend_access_key, spotify_playlist_id, song_duration_limit_ms, created_at, updated_at, spotify_playlist_name
 `
 
 type CreateSessionParams struct {
@@ -47,6 +47,7 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (S
 		&i.SongDurationLimitMs,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SpotifyPlaylistName,
 	)
 	return i, err
 }
@@ -72,7 +73,7 @@ func (q *Queries) FriendKeyExists(ctx context.Context, friendAccessKey string) (
 }
 
 const getSessionByAdminCredentials = `-- name: GetSessionByAdminCredentials :one
-SELECT id, display_name, admin_name, admin_password_hash, friend_access_key, spotify_playlist_id, song_duration_limit_ms, created_at, updated_at FROM sessions WHERE admin_name = ? AND admin_password_hash = ?
+SELECT id, display_name, admin_name, admin_password_hash, friend_access_key, spotify_playlist_id, song_duration_limit_ms, created_at, updated_at, spotify_playlist_name FROM sessions WHERE admin_name = ? AND admin_password_hash = ?
 `
 
 type GetSessionByAdminCredentialsParams struct {
@@ -93,12 +94,13 @@ func (q *Queries) GetSessionByAdminCredentials(ctx context.Context, arg GetSessi
 		&i.SongDurationLimitMs,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SpotifyPlaylistName,
 	)
 	return i, err
 }
 
 const getSessionByFriendKey = `-- name: GetSessionByFriendKey :one
-SELECT id, display_name, admin_name, admin_password_hash, friend_access_key, spotify_playlist_id, song_duration_limit_ms, created_at, updated_at FROM sessions WHERE friend_access_key = ?
+SELECT id, display_name, admin_name, admin_password_hash, friend_access_key, spotify_playlist_id, song_duration_limit_ms, created_at, updated_at, spotify_playlist_name FROM sessions WHERE friend_access_key = ?
 `
 
 func (q *Queries) GetSessionByFriendKey(ctx context.Context, friendAccessKey string) (Session, error) {
@@ -114,12 +116,13 @@ func (q *Queries) GetSessionByFriendKey(ctx context.Context, friendAccessKey str
 		&i.SongDurationLimitMs,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SpotifyPlaylistName,
 	)
 	return i, err
 }
 
 const getSessionByID = `-- name: GetSessionByID :one
-SELECT id, display_name, admin_name, admin_password_hash, friend_access_key, spotify_playlist_id, song_duration_limit_ms, created_at, updated_at FROM sessions WHERE id = ?
+SELECT id, display_name, admin_name, admin_password_hash, friend_access_key, spotify_playlist_id, song_duration_limit_ms, created_at, updated_at, spotify_playlist_name FROM sessions WHERE id = ?
 `
 
 func (q *Queries) GetSessionByID(ctx context.Context, id string) (Session, error) {
@@ -135,21 +138,23 @@ func (q *Queries) GetSessionByID(ctx context.Context, id string) (Session, error
 		&i.SongDurationLimitMs,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SpotifyPlaylistName,
 	)
 	return i, err
 }
 
 const updateSessionPlaylist = `-- name: UpdateSessionPlaylist :exec
-UPDATE sessions SET spotify_playlist_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+UPDATE sessions SET spotify_playlist_id = ?, spotify_playlist_name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
 `
 
 type UpdateSessionPlaylistParams struct {
-	SpotifyPlaylistID sql.NullString `json:"spotify_playlist_id"`
-	ID                string         `json:"id"`
+	SpotifyPlaylistID   sql.NullString `json:"spotify_playlist_id"`
+	SpotifyPlaylistName sql.NullString `json:"spotify_playlist_name"`
+	ID                  string         `json:"id"`
 }
 
 func (q *Queries) UpdateSessionPlaylist(ctx context.Context, arg UpdateSessionPlaylistParams) error {
-	_, err := q.db.ExecContext(ctx, updateSessionPlaylist, arg.SpotifyPlaylistID, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateSessionPlaylist, arg.SpotifyPlaylistID, arg.SpotifyPlaylistName, arg.ID)
 	return err
 }
 

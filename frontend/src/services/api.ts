@@ -129,10 +129,10 @@ export const api = {
     return request(`/spotify/search?q=${encodeURIComponent(query)}`)
   },
 
-  updateSessionPlaylist: async (sessionId: string, spotifyPlaylistId: string): Promise<void> => {
+  updateSessionPlaylist: async (sessionId: string, spotifyPlaylistId: string, spotifyPlaylistName: string): Promise<void> => {
     return request(`/sessions/${sessionId}/playlist`, {
       method: 'PUT',
-      body: JSON.stringify({ spotifyPlaylistId }),
+      body: JSON.stringify({ spotifyPlaylistId, spotifyPlaylistName }),
     })
   },
 }

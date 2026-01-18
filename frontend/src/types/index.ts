@@ -4,6 +4,7 @@ export interface Session {
   adminName: string
   friendAccessKey?: string
   spotifyPlaylistId?: string
+  spotifyPlaylistName?: string
   songDurationLimitMs?: number
   createdAt: string
   isAdmin: boolean

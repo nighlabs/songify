@@ -200,6 +200,9 @@ func (h *SessionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	if session.SpotifyPlaylistID.Valid {
 		resp.SpotifyPlaylistID = &session.SpotifyPlaylistID.String
 	}
+	if session.SpotifyPlaylistName.Valid {
+		resp.SpotifyPlaylistName = &session.SpotifyPlaylistName.String
+	}
 	if session.SongDurationLimitMs.Valid {
 		resp.SongDurationLimitMs = &session.SongDurationLimitMs.Int64
 	}
@@ -237,8 +240,9 @@ func (h *SessionHandler) UpdatePlaylist(w http.ResponseWriter, r *http.Request) 
 	}
 
 	err := h.queries.UpdateSessionPlaylist(r.Context(), db.UpdateSessionPlaylistParams{
-		ID:                sessionID,
-		SpotifyPlaylistID: sql.NullString{String: req.SpotifyPlaylistID, Valid: true},
+		ID:                  sessionID,
+		SpotifyPlaylistID:   sql.NullString{String: req.SpotifyPlaylistID, Valid: true},
+		SpotifyPlaylistName: sql.NullString{String: req.SpotifyPlaylistName, Valid: req.SpotifyPlaylistName != ""},
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to update playlist")

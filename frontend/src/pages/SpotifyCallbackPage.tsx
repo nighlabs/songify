@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { Loader2, Music, Plus, Check } from 'lucide-react'
 import { handleSpotifyCallback, getUserPlaylists, createPlaylist } from '@/services/spotify'
 import { useAuthStore } from '@/stores/authStore'
@@ -18,6 +19,7 @@ type State = 'authenticating' | 'selecting' | 'saving' | 'error'
 
 export function SpotifyCallbackPage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const sessionId = useAuthStore((state) => state.sessionId)
   const [state, setState] = useState<State>('authenticating')
   const [playlists, setPlaylists] = useState<SpotifyPlaylist[]>([])
@@ -29,21 +31,37 @@ export function SpotifyCallbackPage() {
   useEffect(() => {
     const processCallback = async () => {
       try {
-        await handleSpotifyCallback()
+        // Check if we have a session to return to
+        if (!sessionId) {
+          console.error('No session ID found')
+          setError('Session not found. Please start a new session.')
+          setState('error')
+          return
+        }
+
+        // Check if this is an OAuth callback (has code in URL) or direct navigation
+        const hasOAuthCode = window.location.search.includes('code=')
+
+        if (hasOAuthCode) {
+          // Process OAuth callback from Spotify
+          await handleSpotifyCallback()
+        }
+
+        // Try to get playlists (works if already authenticated or just authenticated)
         const userPlaylists = await getUserPlaylists()
         setPlaylists(userPlaylists)
         setState('selecting')
       } catch (e) {
         console.error('Spotify callback error:', e)
-        setError('Failed to connect to Spotify')
+        setError('Failed to connect to Spotify. Please try again.')
         setState('error')
       }
     }
 
     processCallback()
-  }, [])
+  }, [sessionId])
 
-  const handleSelectPlaylist = async (playlistId: string) => {
+  const handleSelectPlaylist = async (playlistId: string, playlistName: string) => {
     if (!sessionId) {
       navigate('/')
       return
@@ -53,7 +71,9 @@ export function SpotifyCallbackPage() {
     setState('saving')
 
     try {
-      await api.updateSessionPlaylist(sessionId, playlistId)
+      await api.updateSessionPlaylist(sessionId, playlistId, playlistName)
+      // Invalidate session cache so the new playlist shows immediately
+      await queryClient.invalidateQueries({ queryKey: ['session', sessionId] })
       navigate(`/session/${sessionId}`)
     } catch (e) {
       console.error('Failed to save playlist:', e)
@@ -69,7 +89,9 @@ export function SpotifyCallbackPage() {
 
     try {
       const playlist = await createPlaylist(newPlaylistName.trim())
-      await api.updateSessionPlaylist(sessionId, playlist.id)
+      await api.updateSessionPlaylist(sessionId, playlist.id, playlist.name)
+      // Invalidate session cache so the new playlist shows immediately
+      await queryClient.invalidateQueries({ queryKey: ['session', sessionId] })
       navigate(`/session/${sessionId}`)
     } catch (e) {
       console.error('Failed to create playlist:', e)
@@ -95,9 +117,16 @@ export function SpotifyCallbackPage() {
             <CardTitle className="text-destructive">Connection Error</CardTitle>
             <CardDescription>{error}</CardDescription>
           </CardHeader>
-          <CardContent>
-            <Button onClick={() => navigate('/')} className="w-full">
-              Go Home
+          <CardContent className="space-y-2">
+            <Button
+              onClick={() => window.location.reload()}
+              variant="outline"
+              className="w-full"
+            >
+              Try Again
+            </Button>
+            <Button onClick={() => navigate(sessionId ? `/session/${sessionId}` : '/')} className="w-full">
+              {sessionId ? 'Back to Session' : 'Go Home'}
             </Button>
           </CardContent>
         </Card>
@@ -139,7 +168,7 @@ export function SpotifyCallbackPage() {
                 {playlists.map((playlist) => (
                   <button
                     key={playlist.id}
-                    onClick={() => handleSelectPlaylist(playlist.id)}
+                    onClick={() => handleSelectPlaylist(playlist.id, playlist.name)}
                     className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-colors hover:bg-accent ${
                       selectedPlaylistId === playlist.id ? 'border-primary bg-accent' : 'border-input'
                     }`}

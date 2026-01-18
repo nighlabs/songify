@@ -51,14 +51,15 @@ type RejoinSessionResponse struct {
 }
 
 type SessionResponse struct {
-	ID                 string    `json:"id"`
-	DisplayName        string    `json:"displayName"`
-	AdminName          string    `json:"adminName"`
-	FriendAccessKey    string    `json:"friendAccessKey,omitempty"`
-	SpotifyPlaylistID  *string   `json:"spotifyPlaylistId,omitempty"`
-	SongDurationLimitMs *int64   `json:"songDurationLimitMs,omitempty"`
-	CreatedAt          time.Time `json:"createdAt"`
-	IsAdmin            bool      `json:"isAdmin"`
+	ID                  string    `json:"id"`
+	DisplayName         string    `json:"displayName"`
+	AdminName           string    `json:"adminName"`
+	FriendAccessKey     string    `json:"friendAccessKey,omitempty"`
+	SpotifyPlaylistID   *string   `json:"spotifyPlaylistId,omitempty"`
+	SpotifyPlaylistName *string   `json:"spotifyPlaylistName,omitempty"`
+	SongDurationLimitMs *int64    `json:"songDurationLimitMs,omitempty"`
+	CreatedAt           time.Time `json:"createdAt"`
+	IsAdmin             bool      `json:"isAdmin"`
 }
 
 // Song requests
@@ -92,7 +93,8 @@ type RejectSongRequestRequest struct {
 }
 
 type UpdatePlaylistRequest struct {
-	SpotifyPlaylistID string `json:"spotifyPlaylistId"`
+	SpotifyPlaylistID   string `json:"spotifyPlaylistId"`
+	SpotifyPlaylistName string `json:"spotifyPlaylistName"`
 }
 
 // Spotify search
