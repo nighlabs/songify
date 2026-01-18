@@ -51,15 +51,16 @@ type RejoinSessionResponse struct {
 }
 
 type SessionResponse struct {
-	ID                  string    `json:"id"`
-	DisplayName         string    `json:"displayName"`
-	AdminName           string    `json:"adminName"`
-	FriendAccessKey     string    `json:"friendAccessKey,omitempty"`
-	SpotifyPlaylistID   *string   `json:"spotifyPlaylistId,omitempty"`
-	SpotifyPlaylistName *string   `json:"spotifyPlaylistName,omitempty"`
-	SongDurationLimitMs *int64    `json:"songDurationLimitMs,omitempty"`
-	CreatedAt           time.Time `json:"createdAt"`
-	IsAdmin             bool      `json:"isAdmin"`
+	ID                  string                      `json:"id"`
+	DisplayName         string                      `json:"displayName"`
+	AdminName           string                      `json:"adminName"`
+	FriendAccessKey     string                      `json:"friendAccessKey,omitempty"`
+	SpotifyPlaylistID   *string                     `json:"spotifyPlaylistId,omitempty"`
+	SpotifyPlaylistName *string                     `json:"spotifyPlaylistName,omitempty"`
+	SongDurationLimitMs *int64                      `json:"songDurationLimitMs,omitempty"`
+	ProhibitedPatterns  []ProhibitedPatternResponse `json:"prohibitedPatterns,omitempty"`
+	CreatedAt           time.Time                   `json:"createdAt"`
+	IsAdmin             bool                        `json:"isAdmin"`
 }
 
 // Song requests
@@ -110,6 +111,22 @@ type SpotifyTrackResponse struct {
 	AlbumName   string   `json:"albumName"`
 	AlbumArtURL string   `json:"albumArtUrl,omitempty"`
 	Artists     []string `json:"artists"`
+}
+
+// Settings management
+type UpdateDurationLimitRequest struct {
+	SongDurationLimitMs *int64 `json:"songDurationLimitMs"` // nil to clear
+}
+
+type CreatePatternRequest struct {
+	PatternType string `json:"patternType"` // "artist" or "title"
+	Pattern     string `json:"pattern"`
+}
+
+type ProhibitedPatternResponse struct {
+	ID          int64  `json:"id"`
+	PatternType string `json:"patternType"`
+	Pattern     string `json:"pattern"`
 }
 
 // Error response

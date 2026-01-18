@@ -68,6 +68,20 @@ func New(cfg *config.Config, queries *db.Queries) http.Handler {
 				r.Get("/", sessionHandler.Get)
 				r.Put("/playlist", sessionHandler.UpdatePlaylist)
 
+				// Admin-only settings routes
+				r.Route("/settings", func(r chi.Router) {
+					r.Use(middleware.AdminOnlyMiddleware)
+					r.Put("/duration-limit", sessionHandler.UpdateDurationLimit)
+				})
+
+				// Admin-only patterns routes
+				r.Route("/patterns", func(r chi.Router) {
+					r.Use(middleware.AdminOnlyMiddleware)
+					r.Get("/", sessionHandler.GetProhibitedPatterns)
+					r.Post("/", sessionHandler.CreateProhibitedPattern)
+					r.Delete("/{patternId}", sessionHandler.DeleteProhibitedPattern)
+				})
+
 				// Song requests
 				r.Route("/requests", func(r chi.Router) {
 					r.Get("/", requestHandler.List)
