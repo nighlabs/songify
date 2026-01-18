@@ -26,6 +26,7 @@ type Querier interface {
 	GetSongRequestByID(ctx context.Context, id int64) (SongRequest, error)
 	GetSongRequestsBySessionID(ctx context.Context, sessionID string) ([]SongRequest, error)
 	IsDuplicateRequest(ctx context.Context, arg IsDuplicateRequestParams) (int64, error)
+	ListAllSessions(ctx context.Context) ([]Session, error)
 	RejectSongRequest(ctx context.Context, arg RejectSongRequestParams) error
 	UpdateSessionPlaylist(ctx context.Context, arg UpdateSessionPlaylistParams) error
 	UpdateSessionSettings(ctx context.Context, arg UpdateSessionSettingsParams) error

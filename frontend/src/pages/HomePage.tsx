@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { api } from '@/services/api'
+import { hashFriendKey } from '@/services/crypto'
 import { useAuthStore } from '@/stores/authStore'
 
 export function HomePage() {
@@ -26,7 +27,8 @@ export function HomePage() {
     setError('')
 
     try {
-      const response = await api.joinSession(friendKey.trim().toLowerCase())
+      const friendKeyHash = await hashFriendKey(friendKey)
+      const response = await api.joinSession(friendKeyHash)
       setFriendAuth(response.token, response.sessionId, response.displayName)
       navigate(`/session/${response.sessionId}`)
     } catch {

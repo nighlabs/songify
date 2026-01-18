@@ -4,7 +4,7 @@ import "time"
 
 // Admin portal verification
 type VerifyAdminRequest struct {
-	Password string `json:"password"`
+	PasswordHash string `json:"passwordHash"`
 }
 
 type VerifyAdminResponse struct {
@@ -29,7 +29,7 @@ type CreateSessionResponse struct {
 }
 
 type JoinSessionRequest struct {
-	FriendAccessKey string `json:"friendAccessKey"`
+	FriendKeyHash string `json:"friendKeyHash"`
 }
 
 type JoinSessionResponse struct {
@@ -39,7 +39,7 @@ type JoinSessionResponse struct {
 }
 
 type RejoinSessionRequest struct {
-	FriendAccessKey   string `json:"friendAccessKey"`
+	FriendKeyHash     string `json:"friendKeyHash"`
 	AdminPasswordHash string `json:"adminPasswordHash"`
 }
 

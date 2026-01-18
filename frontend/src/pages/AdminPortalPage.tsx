@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { api } from '@/services/api'
+import { hashPassword } from '@/services/crypto'
 
 export function AdminPortalPage() {
   const navigate = useNavigate()
@@ -24,7 +25,10 @@ export function AdminPortalPage() {
     setError('')
 
     try {
-      const response = await api.verifyAdminPassword(password)
+      // Use UTC day of month as salt for the hash
+      const utcDay = new Date().getUTCDate().toString()
+      const passwordHash = await hashPassword(password, utcDay)
+      const response = await api.verifyAdminPassword(passwordHash)
       if (response.valid) {
         navigate('/admin/create')
       } else {
