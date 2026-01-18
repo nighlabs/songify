@@ -91,6 +91,10 @@ type RejectSongRequestRequest struct {
 	Reason string `json:"reason,omitempty"`
 }
 
+type UpdatePlaylistRequest struct {
+	SpotifyPlaylistID string `json:"spotifyPlaylistId"`
+}
+
 // Spotify search
 type SpotifySearchResponse struct {
 	Tracks []SpotifyTrackResponse `json:"tracks"`

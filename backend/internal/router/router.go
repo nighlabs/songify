@@ -66,6 +66,7 @@ func New(cfg *config.Config, queries *db.Queries) http.Handler {
 				r.Use(middleware.AuthMiddleware(authService))
 
 				r.Get("/", sessionHandler.Get)
+				r.Put("/playlist", sessionHandler.UpdatePlaylist)
 
 				// Song requests
 				r.Route("/requests", func(r chi.Router) {

@@ -53,6 +53,20 @@ export async function addTrackToPlaylist(playlistId: string, trackUri: string) {
   await spotifyApi.playlists.addItemsToPlaylist(playlistId, [trackUri])
 }
 
+export async function createPlaylist(name: string, description?: string) {
+  if (!spotifyApi) {
+    throw new Error('Spotify not authenticated')
+  }
+
+  const user = await spotifyApi.currentUser.profile()
+  const playlist = await spotifyApi.playlists.createPlaylist(user.id, {
+    name,
+    description: description || 'Created by Songify',
+    public: false,
+  })
+  return playlist
+}
+
 export async function handleSpotifyCallback(): Promise<void> {
   const config = getCachedConfig() || await getConfig()
 

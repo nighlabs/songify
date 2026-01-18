@@ -92,8 +92,8 @@ cp .env.example .env
 # - JWT_SECRET (change for production)
 # - ADMIN_PORTAL_PASSWORD
 
-# Run the server
-go run ./cmd/server
+# Load environment and run the server (set -a exports variables to subprocesses)
+set -a && source .env && set +a && go run ./cmd/server
 ```
 
 The backend runs on `http://localhost:8080`.
