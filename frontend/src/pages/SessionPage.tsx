@@ -214,23 +214,41 @@ export function SessionPage() {
       </header>
 
       <main className="container mx-auto px-4 py-6 space-y-6">
-        {/* Admin Spotify Connect */}
-        {isAdmin && !isSpotifyAuthenticated() && (
-          <Card className="bg-green-50 border-green-200">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium">Connect to Spotify</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Connect your Spotify account to add approved songs to your playlist
-                  </p>
+        {/* Admin Spotify Status */}
+        {isAdmin && (
+          session?.spotifyPlaylistId ? (
+            <Card className="bg-green-50 border-green-200">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-green-600 flex items-center justify-center">
+                    <Check className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-green-800">Spotify Connected</h3>
+                    <p className="text-sm text-green-600">
+                      Approved songs will be added to your linked playlist
+                    </p>
+                  </div>
                 </div>
-                <Button onClick={handleSpotifyAuth} className="bg-green-600 hover:bg-green-700">
-                  Connect Spotify
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="bg-green-50 border-green-200">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-medium">Connect to Spotify</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Connect your Spotify account to add approved songs to your playlist
+                    </p>
+                  </div>
+                  <Button onClick={handleSpotifyAuth} className="bg-green-600 hover:bg-green-700">
+                    Connect Spotify
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )
         )}
 
         {/* Search Section */}
