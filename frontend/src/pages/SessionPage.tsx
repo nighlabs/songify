@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -11,6 +11,8 @@ import {
   LogOut,
   Loader2,
   Plus,
+  ExternalLink,
+  RefreshCw,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,7 +25,14 @@ import {
   authenticateSpotify,
   isSpotifyAuthenticated,
   addTrackToPlaylist,
+  getPlaylist,
 } from '@/services/spotify'
+
+type PlaylistInfo = {
+  name: string
+  imageUrl: string | null
+  externalUrl: string
+}
 
 function formatDuration(ms: number): string {
   const minutes = Math.floor(ms / 60000)
@@ -57,6 +66,137 @@ function StatusBadge({ status }: { status: string }) {
     default:
       return null
   }
+}
+
+function SpotifyStatus({
+  playlistId,
+  onConnect,
+  onChangePlaylist
+}: {
+  playlistId: string | null | undefined
+  onConnect: () => void
+  onChangePlaylist: () => void
+}) {
+  const [playlist, setPlaylist] = useState<PlaylistInfo | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (playlistId && isSpotifyAuthenticated()) {
+      setLoading(true)
+      getPlaylist(playlistId)
+        .then((p) => {
+          setPlaylist({
+            name: p.name,
+            imageUrl: p.images?.[0]?.url || null,
+            externalUrl: p.external_urls.spotify,
+          })
+        })
+        .catch((e) => {
+          console.error('Failed to fetch playlist:', e)
+          // Still show as connected even if we can't fetch details
+          setPlaylist({
+            name: 'Linked Playlist',
+            imageUrl: null,
+            externalUrl: `https://open.spotify.com/playlist/${playlistId}`,
+          })
+        })
+        .finally(() => setLoading(false))
+    } else if (playlistId) {
+      // Has playlist but not authenticated in this session
+      setPlaylist({
+        name: 'Linked Playlist',
+        imageUrl: null,
+        externalUrl: `https://open.spotify.com/playlist/${playlistId}`,
+      })
+    }
+  }, [playlistId])
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  if (!playlistId) {
+    return (
+      <Button
+        size="sm"
+        onClick={onConnect}
+        className="bg-green-600 hover:bg-green-700 text-white"
+      >
+        <Music className="h-4 w-4 mr-1" />
+        Connect Spotify
+      </Button>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className="h-8 w-8 rounded bg-green-100 flex items-center justify-center">
+        <Loader2 className="h-4 w-4 animate-spin text-green-600" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        onClick={() => setDropdownOpen(!dropdownOpen)}
+        className="flex items-center gap-2 px-2 py-1 rounded-lg border border-green-200 bg-green-50 hover:bg-green-100 transition-colors"
+      >
+        {playlist?.imageUrl ? (
+          <img
+            src={playlist.imageUrl}
+            alt={playlist.name}
+            className="h-7 w-7 rounded"
+          />
+        ) : (
+          <div className="h-7 w-7 rounded bg-green-600 flex items-center justify-center">
+            <Music className="h-4 w-4 text-white" />
+          </div>
+        )}
+        <span className="text-sm font-medium text-green-800 max-w-[120px] truncate hidden sm:block">
+          {playlist?.name}
+        </span>
+      </button>
+
+      {dropdownOpen && (
+        <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border py-1 z-20">
+          <div className="px-3 py-2 border-b">
+            <p className="text-xs text-muted-foreground">Linked Playlist</p>
+            <p className="font-medium truncate">{playlist?.name}</p>
+          </div>
+          <a
+            href={playlist?.externalUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-3 py-2 hover:bg-muted transition-colors"
+            onClick={() => setDropdownOpen(false)}
+          >
+            <ExternalLink className="h-4 w-4" />
+            <span>Open in Spotify</span>
+          </a>
+          <button
+            onClick={() => {
+              setDropdownOpen(false)
+              onChangePlaylist()
+            }}
+            className="flex items-center gap-2 px-3 py-2 w-full text-left hover:bg-muted transition-colors"
+          >
+            <RefreshCw className="h-4 w-4" />
+            <span>Change Playlist</span>
+          </button>
+        </div>
+      )}
+    </div>
+  )
 }
 
 export function SessionPage() {
@@ -194,6 +334,13 @@ export function SessionPage() {
               {isAdmin && <Badge variant="secondary">Admin</Badge>}
             </div>
             <div className="flex items-center gap-2">
+              {isAdmin && (
+                <SpotifyStatus
+                  playlistId={session?.spotifyPlaylistId}
+                  onConnect={handleSpotifyAuth}
+                  onChangePlaylist={handleSpotifyAuth}
+                />
+              )}
               {isAdmin && friendAccessKey && (
                 <Button
                   variant="outline"
@@ -202,7 +349,8 @@ export function SessionPage() {
                   className="flex items-center gap-1"
                 >
                   <Share2 className="h-4 w-4" />
-                  {copiedKey ? 'Copied!' : friendAccessKey}
+                  <span className="hidden sm:inline">{copiedKey ? 'Copied!' : friendAccessKey}</span>
+                  <span className="sm:hidden">{copiedKey ? 'Copied!' : 'Share'}</span>
                 </Button>
               )}
               <Button variant="ghost" size="icon" onClick={handleLogout}>
@@ -214,43 +362,6 @@ export function SessionPage() {
       </header>
 
       <main className="container mx-auto px-4 py-6 space-y-6">
-        {/* Admin Spotify Status */}
-        {isAdmin && (
-          session?.spotifyPlaylistId ? (
-            <Card className="bg-green-50 border-green-200">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-green-600 flex items-center justify-center">
-                    <Check className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-green-800">Spotify Connected</h3>
-                    <p className="text-sm text-green-600">
-                      Approved songs will be added to your linked playlist
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card className="bg-green-50 border-green-200">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium">Connect to Spotify</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Connect your Spotify account to add approved songs to your playlist
-                    </p>
-                  </div>
-                  <Button onClick={handleSpotifyAuth} className="bg-green-600 hover:bg-green-700">
-                    Connect Spotify
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )
-        )}
-
         {/* Search Section */}
         <Card>
           <CardHeader>

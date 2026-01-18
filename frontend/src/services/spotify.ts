@@ -53,6 +53,14 @@ export async function addTrackToPlaylist(playlistId: string, trackUri: string) {
   await spotifyApi.playlists.addItemsToPlaylist(playlistId, [trackUri])
 }
 
+export async function getPlaylist(playlistId: string) {
+  if (!spotifyApi) {
+    throw new Error('Spotify not authenticated')
+  }
+
+  return spotifyApi.playlists.getPlaylist(playlistId)
+}
+
 export async function createPlaylist(name: string, description?: string) {
   if (!spotifyApi) {
     throw new Error('Spotify not authenticated')
