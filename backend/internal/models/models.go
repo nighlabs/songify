@@ -39,7 +39,7 @@ type JoinSessionResponse struct {
 }
 
 type RejoinSessionRequest struct {
-	AdminName         string `json:"adminName"`
+	FriendAccessKey   string `json:"friendAccessKey"`
 	AdminPasswordHash string `json:"adminPasswordHash"`
 }
 
