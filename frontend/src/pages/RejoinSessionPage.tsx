@@ -13,6 +13,7 @@ export function RejoinSessionPage() {
   const navigate = useNavigate()
   const setAdminAuth = useAuthStore((state) => state.setAdminAuth)
 
+  const [friendAccessKey, setFriendAccessKey] = useState('')
   const [adminName, setAdminName] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -21,7 +22,7 @@ export function RejoinSessionPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!adminName || !password) {
+    if (!friendAccessKey || !adminName || !password) {
       setError('Please fill in all fields')
       return
     }
@@ -31,7 +32,7 @@ export function RejoinSessionPage() {
 
     try {
       const passwordHash = await hashPassword(password, adminName)
-      const response = await api.rejoinSession(adminName, passwordHash)
+      const response = await api.rejoinSession(friendAccessKey, passwordHash)
 
       setAdminAuth(
         response.token,
@@ -41,7 +42,7 @@ export function RejoinSessionPage() {
       )
       navigate(`/session/${response.sessionId}`)
     } catch {
-      setError('Invalid credentials. Please check your name and password.')
+      setError('Invalid credentials. Please check your access key, name, and password.')
     } finally {
       setLoading(false)
     }
@@ -66,11 +67,24 @@ export function RejoinSessionPage() {
               Rejoin Session
             </CardTitle>
             <CardDescription>
-              Sign back into your existing session
+              Sign back into your existing session using your friend access key
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="friendAccessKey">Friend Access Key</Label>
+                <Input
+                  id="friendAccessKey"
+                  placeholder="e.g., happy-tiger-42"
+                  value={friendAccessKey}
+                  onChange={(e) => setFriendAccessKey(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  The key you shared with friends to join the session
+                </p>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="adminName">Your Name</Label>
                 <Input

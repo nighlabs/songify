@@ -141,16 +141,19 @@ func (h *SessionHandler) Rejoin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.AdminName == "" || req.AdminPasswordHash == "" {
-		writeError(w, http.StatusBadRequest, "adminName and adminPasswordHash are required")
+	if req.FriendAccessKey == "" || req.AdminPasswordHash == "" {
+		writeError(w, http.StatusBadRequest, "friendAccessKey and adminPasswordHash are required")
 		return
 	}
 
-	session, err := h.queries.GetSessionByAdminCredentials(r.Context(), db.GetSessionByAdminCredentialsParams{
-		AdminName:         req.AdminName,
-		AdminPasswordHash: req.AdminPasswordHash,
-	})
+	session, err := h.queries.GetSessionByFriendKey(r.Context(), req.FriendAccessKey)
 	if err != nil {
+		writeError(w, http.StatusUnauthorized, "invalid credentials")
+		return
+	}
+
+	// Verify the admin password
+	if session.AdminPasswordHash != req.AdminPasswordHash {
 		writeError(w, http.StatusUnauthorized, "invalid credentials")
 		return
 	}

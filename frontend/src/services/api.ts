@@ -73,10 +73,10 @@ export const api = {
     })
   },
 
-  rejoinSession: async (adminName: string, adminPasswordHash: string): Promise<RejoinSessionResponse> => {
+  rejoinSession: async (friendAccessKey: string, adminPasswordHash: string): Promise<RejoinSessionResponse> => {
     return request('/sessions/rejoin', {
       method: 'POST',
-      body: JSON.stringify({ adminName, adminPasswordHash }),
+      body: JSON.stringify({ friendAccessKey, adminPasswordHash }),
     })
   },
 
