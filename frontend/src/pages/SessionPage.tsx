@@ -79,57 +79,54 @@ function SpotifyStatus({
   onConnect: () => void
   onChangePlaylist: () => void
 }) {
-  const [playlist, setPlaylist] = useState<PlaylistInfo | null>(null)
+  // Compute initial playlist state from props
+  const initialPlaylist: PlaylistInfo | null = playlistId ? {
+    name: playlistName || 'Linked Playlist',
+    imageUrl: null,
+    externalUrl: `https://open.spotify.com/playlist/${playlistId}`,
+  } : null
+
+  const [playlist, setPlaylist] = useState<PlaylistInfo | null>(initialPlaylist)
   const [loading, setLoading] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
+  // Fetch full playlist details from Spotify if authenticated (to get image)
   useEffect(() => {
-    let cancelled = false
-
-    // Reset state when playlist changes
-    setPlaylist(null)
-    setLoading(false)
-
-    if (!playlistId) {
+    if (!playlistId || !isSpotifyAuthenticated()) {
       return
     }
 
-    // Set initial state with stored name while we fetch details
-    setPlaylist({
-      name: playlistName || 'Linked Playlist',
-      imageUrl: null,
-      externalUrl: `https://open.spotify.com/playlist/${playlistId}`,
-    })
+    const controller = new AbortController()
 
-    // If authenticated with Spotify, fetch full details (including image)
-    if (isSpotifyAuthenticated()) {
+    const fetchPlaylist = async () => {
       setLoading(true)
-      getPlaylist(playlistId)
-        .then((p) => {
-          if (!cancelled) {
-            setPlaylist({
-              name: p.name,
-              imageUrl: p.images?.[0]?.url || null,
-              externalUrl: p.external_urls.spotify,
-            })
-          }
-        })
-        .catch((e) => {
+      try {
+        const p = await getPlaylist(playlistId)
+        if (!controller.signal.aborted) {
+          setPlaylist({
+            name: p.name,
+            imageUrl: p.images?.[0]?.url || null,
+            externalUrl: p.external_urls.spotify,
+          })
+        }
+      } catch (e) {
+        if (!controller.signal.aborted) {
           console.error('Failed to fetch playlist:', e)
-          // Keep the initial state with stored name
-        })
-        .finally(() => {
-          if (!cancelled) {
-            setLoading(false)
-          }
-        })
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false)
+        }
+      }
     }
+
+    fetchPlaylist()
 
     return () => {
-      cancelled = true
+      controller.abort()
     }
-  }, [playlistId, playlistName])
+  }, [playlistId])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -356,6 +353,7 @@ export function SessionPage() {
             <div className="flex items-center gap-2">
               {isAdmin && (
                 <SpotifyStatus
+                  key={session?.spotifyPlaylistId || 'no-playlist'}
                   playlistId={session?.spotifyPlaylistId}
                   playlistName={session?.spotifyPlaylistName}
                   onConnect={handleSpotifyAuth}
