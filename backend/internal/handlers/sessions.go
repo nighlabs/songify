@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -211,6 +212,19 @@ func (h *SessionHandler) Get(w http.ResponseWriter, r *http.Request) {
 		resp.FriendAccessKey = session.FriendAccessKey
 	}
 
+	// Fetch prohibited patterns
+	patterns, err := h.queries.GetProhibitedPatternsBySessionID(r.Context(), sessionID)
+	if err == nil && len(patterns) > 0 {
+		resp.ProhibitedPatterns = make([]models.ProhibitedPatternResponse, len(patterns))
+		for i, p := range patterns {
+			resp.ProhibitedPatterns[i] = models.ProhibitedPatternResponse{
+				ID:          p.ID,
+				PatternType: p.PatternType,
+				Pattern:     p.Pattern,
+			}
+		}
+	}
+
 	writeJSON(w, http.StatusOK, resp)
 }
 
@@ -246,6 +260,151 @@ func (h *SessionHandler) UpdatePlaylist(w http.ResponseWriter, r *http.Request) 
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to update playlist")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func (h *SessionHandler) UpdateDurationLimit(w http.ResponseWriter, r *http.Request) {
+	sessionID := chi.URLParam(r, "id")
+	claims := middleware.GetClaims(r.Context())
+
+	if claims.SessionID != sessionID {
+		writeError(w, http.StatusForbidden, "access denied")
+		return
+	}
+
+	if claims.Role != services.RoleAdmin {
+		writeError(w, http.StatusForbidden, "admin access required")
+		return
+	}
+
+	var req models.UpdateDurationLimitRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	var durationLimit sql.NullInt64
+	if req.SongDurationLimitMs != nil {
+		durationLimit = sql.NullInt64{Int64: *req.SongDurationLimitMs, Valid: true}
+	}
+
+	err := h.queries.UpdateSessionSettings(r.Context(), db.UpdateSessionSettingsParams{
+		ID:                  sessionID,
+		SongDurationLimitMs: durationLimit,
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to update duration limit")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func (h *SessionHandler) GetProhibitedPatterns(w http.ResponseWriter, r *http.Request) {
+	sessionID := chi.URLParam(r, "id")
+	claims := middleware.GetClaims(r.Context())
+
+	if claims.SessionID != sessionID {
+		writeError(w, http.StatusForbidden, "access denied")
+		return
+	}
+
+	if claims.Role != services.RoleAdmin {
+		writeError(w, http.StatusForbidden, "admin access required")
+		return
+	}
+
+	patterns, err := h.queries.GetProhibitedPatternsBySessionID(r.Context(), sessionID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to fetch patterns")
+		return
+	}
+
+	resp := make([]models.ProhibitedPatternResponse, len(patterns))
+	for i, p := range patterns {
+		resp[i] = models.ProhibitedPatternResponse{
+			ID:          p.ID,
+			PatternType: p.PatternType,
+			Pattern:     p.Pattern,
+		}
+	}
+
+	writeJSON(w, http.StatusOK, resp)
+}
+
+func (h *SessionHandler) CreateProhibitedPattern(w http.ResponseWriter, r *http.Request) {
+	sessionID := chi.URLParam(r, "id")
+	claims := middleware.GetClaims(r.Context())
+
+	if claims.SessionID != sessionID {
+		writeError(w, http.StatusForbidden, "access denied")
+		return
+	}
+
+	if claims.Role != services.RoleAdmin {
+		writeError(w, http.StatusForbidden, "admin access required")
+		return
+	}
+
+	var req models.CreatePatternRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if req.PatternType != "artist" && req.PatternType != "title" {
+		writeError(w, http.StatusBadRequest, "patternType must be 'artist' or 'title'")
+		return
+	}
+
+	if req.Pattern == "" {
+		writeError(w, http.StatusBadRequest, "pattern is required")
+		return
+	}
+
+	pattern, err := h.queries.CreateProhibitedPattern(r.Context(), db.CreateProhibitedPatternParams{
+		SessionID:   sessionID,
+		PatternType: req.PatternType,
+		Pattern:     req.Pattern,
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to create pattern")
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, models.ProhibitedPatternResponse{
+		ID:          pattern.ID,
+		PatternType: pattern.PatternType,
+		Pattern:     pattern.Pattern,
+	})
+}
+
+func (h *SessionHandler) DeleteProhibitedPattern(w http.ResponseWriter, r *http.Request) {
+	sessionID := chi.URLParam(r, "id")
+	patternIDStr := chi.URLParam(r, "patternId")
+	claims := middleware.GetClaims(r.Context())
+
+	if claims.SessionID != sessionID {
+		writeError(w, http.StatusForbidden, "access denied")
+		return
+	}
+
+	if claims.Role != services.RoleAdmin {
+		writeError(w, http.StatusForbidden, "admin access required")
+		return
+	}
+
+	patternID, err := strconv.ParseInt(patternIDStr, 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid pattern ID")
+		return
+	}
+
+	if err := h.queries.DeleteProhibitedPattern(r.Context(), patternID); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to delete pattern")
 		return
 	}
 

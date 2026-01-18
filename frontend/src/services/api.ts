@@ -6,6 +6,7 @@ import type {
   CreateSessionResponse,
   JoinSessionResponse,
   RejoinSessionResponse,
+  ProhibitedPattern,
 } from '@/types'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -133,6 +134,36 @@ export const api = {
     return request(`/sessions/${sessionId}/playlist`, {
       method: 'PUT',
       body: JSON.stringify({ spotifyPlaylistId, spotifyPlaylistName }),
+    })
+  },
+
+  // Settings
+  updateDurationLimit: async (sessionId: string, limitMs: number | null): Promise<void> => {
+    return request(`/sessions/${sessionId}/settings/duration-limit`, {
+      method: 'PUT',
+      body: JSON.stringify({ songDurationLimitMs: limitMs }),
+    })
+  },
+
+  // Prohibited patterns
+  getProhibitedPatterns: async (sessionId: string): Promise<ProhibitedPattern[]> => {
+    return request(`/sessions/${sessionId}/patterns`)
+  },
+
+  createProhibitedPattern: async (
+    sessionId: string,
+    patternType: 'artist' | 'title',
+    pattern: string
+  ): Promise<ProhibitedPattern> => {
+    return request(`/sessions/${sessionId}/patterns`, {
+      method: 'POST',
+      body: JSON.stringify({ patternType, pattern }),
+    })
+  },
+
+  deleteProhibitedPattern: async (sessionId: string, patternId: number): Promise<void> => {
+    return request(`/sessions/${sessionId}/patterns/${patternId}`, {
+      method: 'DELETE',
     })
   },
 }

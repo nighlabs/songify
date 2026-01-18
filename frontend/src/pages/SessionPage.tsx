@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -13,11 +13,13 @@ import {
   Plus,
   ExternalLink,
   RefreshCw,
+  Ban,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { AdminSettings } from '@/components/AdminSettings'
 import { api } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
 import type { Session, SongRequest, SpotifyTrack } from '@/types'
@@ -328,6 +330,33 @@ export function SessionPage() {
     }
   }
 
+  // Check if tracks are blocked based on session settings
+  // Must be called before early returns to maintain consistent hook order
+  const getBlockReason = useMemo(() => {
+    return (track: SpotifyTrack): string | null => {
+      if (!session) return null
+
+      // Check duration limit
+      if (session.songDurationLimitMs && track.durationMs > session.songDurationLimitMs) {
+        const limitMins = Math.floor(session.songDurationLimitMs / 60000)
+        const limitSecs = Math.floor((session.songDurationLimitMs % 60000) / 1000)
+        return `Song exceeds ${limitMins}:${limitSecs.toString().padStart(2, '0')} time limit`
+      }
+      // Check prohibited patterns (case-insensitive substring match)
+      for (const p of session.prohibitedPatterns || []) {
+        if (p.patternType === 'artist' &&
+            track.artists.some(a => a.toLowerCase().includes(p.pattern.toLowerCase()))) {
+          return `Artist matches prohibited pattern "${p.pattern}"`
+        }
+        if (p.patternType === 'title' &&
+            track.name.toLowerCase().includes(p.pattern.toLowerCase())) {
+          return `Title matches prohibited pattern "${p.pattern}"`
+        }
+      }
+      return null
+    }
+  }, [session])
+
   if (sessionLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -358,6 +387,12 @@ export function SessionPage() {
                   playlistName={session?.spotifyPlaylistName}
                   onConnect={handleSpotifyAuth}
                   onChangePlaylist={handleSpotifyAuth}
+                />
+              )}
+              {isAdmin && session && (
+                <AdminSettings
+                  session={session}
+                  onSessionUpdate={() => queryClient.invalidateQueries({ queryKey: ['session', id] })}
                 />
               )}
               {isAdmin && friendAccessKey && (
@@ -405,36 +440,64 @@ export function SessionPage() {
             {/* Search Results */}
             {searchResults.length > 0 && (
               <div className="mt-4 space-y-2">
-                {searchResults.map((track) => (
-                  <div
-                    key={track.id}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-                  >
-                    {track.albumArtUrl && (
-                      <img
-                        src={track.albumArtUrl}
-                        alt={track.albumName}
-                        className="w-12 h-12 rounded"
-                      />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{track.name}</p>
-                      <p className="text-sm text-muted-foreground truncate">
-                        {track.artists.join(', ')} • {track.albumName}
-                      </p>
-                    </div>
-                    <span className="text-sm text-muted-foreground">
-                      {formatDuration(track.durationMs)}
-                    </span>
-                    <Button
-                      size="sm"
-                      onClick={() => submitMutation.mutate(track)}
-                      disabled={submitMutation.isPending}
+                {searchResults.map((track) => {
+                  const blockReason = getBlockReason(track)
+                  const isBlocked = blockReason !== null
+
+                  return (
+                    <div
+                      key={track.id}
+                      className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
+                        isBlocked
+                          ? 'bg-muted/30 opacity-60'
+                          : 'bg-muted/50 hover:bg-muted'
+                      }`}
                     >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
+                      {track.albumArtUrl && (
+                        <img
+                          src={track.albumArtUrl}
+                          alt={track.albumName}
+                          className="w-12 h-12 rounded"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{track.name}</p>
+                        <p className="text-sm text-muted-foreground truncate">
+                          {track.artists.join(', ')} • {track.albumName}
+                        </p>
+                      </div>
+                      <span className="text-sm text-muted-foreground">
+                        {formatDuration(track.durationMs)}
+                      </span>
+                      {isBlocked ? (
+                        <div
+                          className="relative group"
+                          title={blockReason}
+                        >
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled
+                            className="text-muted-foreground cursor-not-allowed"
+                          >
+                            <Ban className="h-4 w-4" />
+                          </Button>
+                          <div className="absolute right-0 bottom-full mb-2 hidden group-hover:block w-48 p-2 text-xs bg-popover text-popover-foreground rounded-md shadow-md border z-10">
+                            {blockReason}
+                          </div>
+                        </div>
+                      ) : (
+                        <Button
+                          size="sm"
+                          onClick={() => submitMutation.mutate(track)}
+                          disabled={submitMutation.isPending}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             )}
           </CardContent>

@@ -1,3 +1,9 @@
+export interface ProhibitedPattern {
+  id: number
+  patternType: 'artist' | 'title'
+  pattern: string
+}
+
 export interface Session {
   id: string
   displayName: string
@@ -6,6 +12,7 @@ export interface Session {
   spotifyPlaylistId?: string
   spotifyPlaylistName?: string
   songDurationLimitMs?: number
+  prohibitedPatterns?: ProhibitedPattern[]
   createdAt: string
   isAdmin: boolean
 }
