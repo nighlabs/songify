@@ -125,6 +125,12 @@ export const api = {
     })
   },
 
+  archiveAllRequests: async (sessionId: string): Promise<void> => {
+    return request(`/sessions/${sessionId}/requests`, {
+      method: 'DELETE',
+    })
+  },
+
   // Spotify
   searchSpotify: async (query: string): Promise<{ tracks: SpotifyTrack[] }> => {
     return request(`/spotify/search?q=${encodeURIComponent(query)}`)

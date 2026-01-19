@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
-import { Settings, Clock, Ban } from 'lucide-react'
+import { Settings, Clock, Ban, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { TimeLimitDialog } from '@/components/TimeLimitDialog'
 import { PatternsDialog } from '@/components/PatternsDialog'
+import { ArchiveDialog } from '@/components/ArchiveDialog'
 import type { Session } from '@/types'
 
 interface AdminSettingsProps {
@@ -14,6 +15,7 @@ export function AdminSettings({ session, onSessionUpdate }: AdminSettingsProps) 
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [timeLimitOpen, setTimeLimitOpen] = useState(false)
   const [patternsOpen, setPatternsOpen] = useState(false)
+  const [archiveOpen, setArchiveOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -77,6 +79,17 @@ export function AdminSettings({ session, onSessionUpdate }: AdminSettingsProps) 
                 )}
               </div>
             </button>
+            <div className="border-t my-1" />
+            <button
+              onClick={() => {
+                setDropdownOpen(false)
+                setArchiveOpen(true)
+              }}
+              className="flex items-center gap-2 px-3 py-2 w-full text-left hover:bg-muted transition-colors text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span>Archive All Requests</span>
+            </button>
           </div>
         )}
       </div>
@@ -94,6 +107,13 @@ export function AdminSettings({ session, onSessionUpdate }: AdminSettingsProps) 
         onOpenChange={setPatternsOpen}
         sessionId={session.id}
         patterns={session.prohibitedPatterns || []}
+        onUpdate={onSessionUpdate}
+      />
+
+      <ArchiveDialog
+        open={archiveOpen}
+        onOpenChange={setArchiveOpen}
+        sessionId={session.id}
         onUpdate={onSessionUpdate}
       />
     </>
