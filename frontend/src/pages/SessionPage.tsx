@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import {
   Music,
   Search,
@@ -14,6 +15,7 @@ import {
   ExternalLink,
   RefreshCw,
   Ban,
+  AlertTriangle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -226,6 +228,7 @@ export function SessionPage() {
   const [searchResults, setSearchResults] = useState<SpotifyTrack[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const [copiedKey, setCopiedKey] = useState(false)
+  const [approveError, setApproveError] = useState<string | null>(null)
 
   // Redirect if not authenticated or wrong session
   useEffect(() => {
@@ -256,28 +259,46 @@ export function SessionPage() {
       queryClient.invalidateQueries({ queryKey: ['requests', id] })
       setSearchQuery('')
       setSearchResults([])
+      toast.success('Song request submitted')
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to submit song request')
     },
   })
 
   // Approve mutation
   const approveMutation = useMutation({
     mutationFn: async (requestId: number) => {
-      const result = await api.approveSongRequest(id!, requestId)
-      // Try to add to Spotify playlist
-      if (session?.spotifyPlaylistId && isSpotifyAuthenticated()) {
-        const request = requests.find((r) => r.id === requestId)
-        if (request) {
-          try {
-            await addTrackToPlaylist(session.spotifyPlaylistId, request.spotifyUri)
-          } catch (e) {
-            console.error('Failed to add to playlist:', e)
-          }
-        }
+      // Check Spotify connection BEFORE approving
+      // If a playlist is linked but Spotify isn't authenticated, block the approval
+      if (session?.spotifyPlaylistId && !isSpotifyAuthenticated()) {
+        throw new Error('Spotify connection required. Please reconnect to Spotify to approve songs.')
       }
-      return result
+
+      const request = requests.find((r) => r.id === requestId)
+
+      // If we have a playlist linked and Spotify is authenticated, add to playlist first
+      // This ensures we don't mark as approved if the Spotify call fails
+      if (session?.spotifyPlaylistId && isSpotifyAuthenticated() && request) {
+        await addTrackToPlaylist(session.spotifyPlaylistId, request.spotifyUri)
+      }
+
+      // Only mark as approved after successful Spotify add (or if no playlist linked)
+      return api.approveSongRequest(id!, requestId)
     },
     onSuccess: () => {
+      setApproveError(null)
       queryClient.invalidateQueries({ queryKey: ['requests', id] })
+      toast.success('Song approved')
+    },
+    onError: (error: Error) => {
+      // Show inline error for Spotify connection issues (actionable)
+      // Show toast for other errors
+      if (error.message.includes('Spotify connection required')) {
+        setApproveError(error.message)
+      } else {
+        toast.error(error.message || 'Failed to approve song')
+      }
     },
   })
 
@@ -285,7 +306,11 @@ export function SessionPage() {
   const rejectMutation = useMutation({
     mutationFn: (requestId: number) => api.rejectSongRequest(id!, requestId),
     onSuccess: () => {
+      toast.success('Song rejected')
       queryClient.invalidateQueries({ queryKey: ['requests', id] })
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to reject song')
     },
   })
 
@@ -298,7 +323,8 @@ export function SessionPage() {
       const response = await api.searchSpotify(searchQuery)
       setSearchResults(response.tracks)
     } catch (e) {
-      console.error('Search failed:', e)
+      const message = e instanceof Error ? e.message : 'Search failed'
+      toast.error(message)
     } finally {
       setIsSearching(false)
     }
@@ -326,7 +352,8 @@ export function SessionPage() {
       // After authentication, navigate to callback to select playlist
       navigate('/callback')
     } catch (e) {
-      console.error('Spotify auth failed:', e)
+      const message = e instanceof Error ? e.message : 'Spotify authentication failed'
+      toast.error(message)
     }
   }
 
@@ -513,6 +540,20 @@ export function SessionPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
+              {approveError && (
+                <div className="flex items-center gap-2 p-3 mb-3 rounded-lg bg-red-50 border border-red-200 text-red-800">
+                  <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                  <p className="text-sm">{approveError}</p>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="ml-auto h-6 w-6 text-red-600 hover:bg-red-100"
+                    onClick={() => setApproveError(null)}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              )}
               <div className="space-y-2">
                 {pendingRequests.map((request) => (
                   <div
