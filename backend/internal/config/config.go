@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -17,6 +18,7 @@ type Config struct {
 	FriendTokenDuration   time.Duration
 	RateLimitPerMinute    int
 	CORSAllowedOrigins    []string
+	TrustedProxies        []string
 }
 
 func Load() *Config {
@@ -31,7 +33,23 @@ func Load() *Config {
 		FriendTokenDuration:   getDurationEnv("FRIEND_TOKEN_DURATION", 12*time.Hour),
 		RateLimitPerMinute:    getIntEnv("RATE_LIMIT_PER_MINUTE", 10),
 		CORSAllowedOrigins:    []string{"http://localhost:5173", "http://localhost:3000"},
+		TrustedProxies:        getStringSliceEnv("TRUSTED_PROXIES"),
 	}
+}
+
+func getStringSliceEnv(key string) []string {
+	value := os.Getenv(key)
+	if value == "" {
+		return nil
+	}
+	var result []string
+	for _, s := range strings.Split(value, ",") {
+		s = strings.TrimSpace(s)
+		if s != "" {
+			result = append(result, s)
+		}
+	}
+	return result
 }
 
 func getEnv(key, defaultValue string) string {

@@ -17,7 +17,8 @@ func New(cfg *config.Config, queries *db.Queries) http.Handler {
 
 	// Global middleware
 	r.Use(chimiddleware.Recoverer)
-	r.Use(chimiddleware.RealIP)
+	realIPMiddleware := middleware.NewRealIPMiddleware(cfg.TrustedProxies)
+	r.Use(realIPMiddleware.Handler)
 	r.Use(middleware.RequestContextMiddleware)
 	r.Use(middleware.CORSMiddleware(cfg.CORSAllowedOrigins))
 
