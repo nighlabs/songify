@@ -218,6 +218,23 @@ func (h *RequestHandler) Reject(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, songRequestToResponse(updatedRequest))
 }
 
+func (h *RequestHandler) ArchiveAll(w http.ResponseWriter, r *http.Request) {
+	sessionID := chi.URLParam(r, "id")
+	claims := middleware.GetClaims(r.Context())
+
+	if claims.SessionID != sessionID || claims.Role != services.RoleAdmin {
+		writeError(w, http.StatusForbidden, "admin access required")
+		return
+	}
+
+	if err := h.queries.DeleteAllSongRequestsBySessionID(r.Context(), sessionID); err != nil {
+		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to archive requests", err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
 func songRequestToResponse(req db.SongRequest) models.SongRequestResponse {
 	resp := models.SongRequestResponse{
 		ID:             req.ID,

@@ -89,6 +89,9 @@ func New(cfg *config.Config, queries *db.Queries) http.Handler {
 					r.Get("/", requestHandler.List)
 					r.Post("/", requestHandler.Submit)
 
+					// Admin-only: archive all requests
+					r.With(middleware.AdminOnlyMiddleware).Delete("/", requestHandler.ArchiveAll)
+
 					// Admin-only actions
 					r.Route("/{rid}", func(r chi.Router) {
 						r.Use(middleware.AdminOnlyMiddleware)

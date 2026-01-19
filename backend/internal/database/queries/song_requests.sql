@@ -26,3 +26,6 @@ SELECT EXISTS(
 
 -- name: DeleteSongRequest :exec
 DELETE FROM song_requests WHERE id = ?;
+
+-- name: DeleteAllSongRequestsBySessionID :exec
+DELETE FROM song_requests WHERE session_id = ?;
