@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Loader2, X, Plus } from 'lucide-react'
+import { toast } from 'sonner'
 import {
   Dialog,
   DialogContent,
@@ -46,8 +47,10 @@ export function PatternsDialog({
       await api.createProhibitedPattern(sessionId, patternType, pattern.trim())
       setPattern('')
       onUpdate()
+      toast.success('Pattern added')
     } catch {
       setError('Failed to add pattern')
+      toast.error('Failed to add pattern')
     } finally {
       setAdding(false)
     }
@@ -58,8 +61,10 @@ export function PatternsDialog({
     try {
       await api.deleteProhibitedPattern(sessionId, patternId)
       onUpdate()
+      toast.success('Pattern removed')
     } catch {
       setError('Failed to delete pattern')
+      toast.error('Failed to delete pattern')
     } finally {
       setDeletingId(null)
     }

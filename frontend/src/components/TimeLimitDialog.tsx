@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import {
   Dialog,
   DialogContent,
@@ -60,8 +61,10 @@ export function TimeLimitDialog({
       await api.updateDurationLimit(sessionId, limitMs)
       onUpdate()
       onOpenChange(false)
+      toast.success('Time limit updated')
     } catch {
       setError('Failed to update time limit')
+      toast.error('Failed to update time limit')
     } finally {
       setSaving(false)
     }
@@ -74,8 +77,10 @@ export function TimeLimitDialog({
       await api.updateDurationLimit(sessionId, null)
       onUpdate()
       onOpenChange(false)
+      toast.success('Time limit cleared')
     } catch {
       setError('Failed to clear time limit')
+      toast.error('Failed to clear time limit')
     } finally {
       setSaving(false)
     }
