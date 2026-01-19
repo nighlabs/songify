@@ -7,25 +7,15 @@ import (
 	"time"
 
 	"github.com/songify/backend/internal/db"
+	"github.com/tyler-smith/go-bip39/wordlists"
 )
 
-// Word lists for generating memorable friend keys (e.g., "happy-panda-42").
-var adjectives = []string{
-	"happy", "silly", "clever", "brave", "swift",
-	"gentle", "wild", "calm", "bright", "cool",
-	"fuzzy", "lucky", "jolly", "merry", "zesty",
-	"peppy", "cozy", "funky", "snappy", "groovy",
-}
-
-var nouns = []string{
-	"tiger", "panda", "dolphin", "eagle", "koala",
-	"penguin", "otter", "fox", "owl", "bear",
-	"rabbit", "monkey", "whale", "parrot", "turtle",
-	"zebra", "lion", "wolf", "deer", "hawk",
-}
+// wordlist is the BIP39 English wordlist (2048 words).
+// Using two words plus a number gives 2048 × 2048 × 100 = 419 million combinations.
+var wordlist = wordlists.English
 
 // FriendKeyService generates unique, human-readable keys for session sharing.
-// Keys follow the pattern "adjective-noun-number" (e.g., "happy-panda-42").
+// Keys follow the pattern "word-word-number" (e.g., "apple-river-42").
 type FriendKeyService struct {
 	queries *db.Queries
 	rng     *rand.Rand
@@ -44,10 +34,10 @@ func NewFriendKeyService(queries *db.Queries) *FriendKeyService {
 func (s *FriendKeyService) Generate(ctx context.Context) (string, error) {
 	maxAttempts := 100
 	for i := 0; i < maxAttempts; i++ {
-		adj := adjectives[s.rng.Intn(len(adjectives))]
-		noun := nouns[s.rng.Intn(len(nouns))]
+		word1 := wordlist[s.rng.Intn(len(wordlist))]
+		word2 := wordlist[s.rng.Intn(len(wordlist))]
 		num := s.rng.Intn(100)
-		key := fmt.Sprintf("%s-%s-%d", adj, noun, num)
+		key := fmt.Sprintf("%s-%s-%d", word1, word2, num)
 
 		exists, err := s.queries.FriendKeyExists(ctx, key)
 		if err != nil {
