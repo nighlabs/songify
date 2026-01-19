@@ -143,6 +143,8 @@ function SpotifyStatus({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  const isConnected = isSpotifyAuthenticated()
+
   if (!playlistId) {
     return (
       <Button
@@ -160,6 +162,46 @@ function SpotifyStatus({
     return (
       <div className="h-8 w-8 rounded bg-green-100 flex items-center justify-center">
         <Loader2 className="h-4 w-4 animate-spin text-green-600" />
+      </div>
+    )
+  }
+
+  // Show disconnected state when playlist is linked but Spotify isn't authenticated
+  if (!isConnected) {
+    return (
+      <div className="relative" ref={dropdownRef}>
+        <button
+          onClick={() => setDropdownOpen(!dropdownOpen)}
+          className="flex items-center gap-2 px-2 py-1 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 transition-colors"
+        >
+          <div className="h-7 w-7 rounded bg-amber-500 flex items-center justify-center">
+            <AlertTriangle className="h-4 w-4 text-white" />
+          </div>
+          <span className="text-sm font-medium text-amber-800 max-w-[150px] truncate">
+            Reconnect
+          </span>
+        </button>
+
+        {dropdownOpen && (
+          <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border py-1 z-20">
+            <div className="px-3 py-2 border-b">
+              <p className="text-xs text-amber-600 font-medium">Spotify Disconnected</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Reconnect to approve songs to "{playlist?.name}"
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setDropdownOpen(false)
+                onConnect()
+              }}
+              className="flex items-center gap-2 px-3 py-2 w-full text-left hover:bg-muted transition-colors text-amber-700 font-medium"
+            >
+              <RefreshCw className="h-4 w-4" />
+              <span>Reconnect Spotify</span>
+            </button>
+          </div>
+        )}
       </div>
     )
   }
