@@ -1,3 +1,6 @@
+// Package database provides SQLite database initialization and migration support.
+// It uses embedded SQL migration files and the golang-migrate library to manage
+// schema versions.
 package database
 
 import (
@@ -15,6 +18,8 @@ import (
 //go:embed migrations/*.sql
 var migrationsFS embed.FS
 
+// New creates and configures a new SQLite database connection.
+// It enables foreign key constraints and WAL mode for better concurrency.
 func New(dbPath string) (*sql.DB, error) {
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
@@ -34,6 +39,9 @@ func New(dbPath string) (*sql.DB, error) {
 	return db, nil
 }
 
+// RunMigrations applies any pending database migrations from the embedded
+// migrations directory. It's safe to call multiple times; already-applied
+// migrations are skipped.
 func RunMigrations(db *sql.DB) error {
 	driver, err := sqlite.WithInstance(db, &sqlite.Config{})
 	if err != nil {

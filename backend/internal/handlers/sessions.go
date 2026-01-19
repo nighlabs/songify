@@ -19,12 +19,14 @@ import (
 	"golang.org/x/crypto/scrypt"
 )
 
+// SessionHandler manages session lifecycle: creation, joining, and settings.
 type SessionHandler struct {
 	queries          *db.Queries
 	authService      *services.AuthService
 	friendKeyService *services.FriendKeyService
 }
 
+// NewSessionHandler creates a SessionHandler with the required dependencies.
 func NewSessionHandler(queries *db.Queries, authService *services.AuthService, friendKeyService *services.FriendKeyService) *SessionHandler {
 	return &SessionHandler{
 		queries:          queries,
@@ -49,6 +51,8 @@ func hashFriendKey(friendKey string) string {
 	return hex.EncodeToString(dk)
 }
 
+// Create initializes a new session with the admin as owner.
+// Returns the session ID, friend access key, and admin JWT token.
 func (h *SessionHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateSessionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -125,6 +129,8 @@ func (h *SessionHandler) Create(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Join allows a friend to enter a session using the shared friend key.
+// The friend key is hashed client-side before being sent for comparison.
 func (h *SessionHandler) Join(w http.ResponseWriter, r *http.Request) {
 	var req models.JoinSessionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -171,6 +177,8 @@ func (h *SessionHandler) Join(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Rejoin allows an admin to reclaim their session after losing their token.
+// Requires both the friend key hash and admin password hash for verification.
 func (h *SessionHandler) Rejoin(w http.ResponseWriter, r *http.Request) {
 	var req models.RejoinSessionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -225,6 +233,7 @@ func (h *SessionHandler) Rejoin(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Get returns the session details. Admins see additional fields like the friend key.
 func (h *SessionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	sessionID := chi.URLParam(r, "id")
 	claims := middleware.GetClaims(r.Context())
@@ -280,6 +289,7 @@ func (h *SessionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// UpdatePlaylist sets or updates the Spotify playlist for the session.
 func (h *SessionHandler) UpdatePlaylist(w http.ResponseWriter, r *http.Request) {
 	sessionID := chi.URLParam(r, "id")
 	claims := middleware.GetClaims(r.Context())
@@ -318,6 +328,7 @@ func (h *SessionHandler) UpdatePlaylist(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
+// UpdateDurationLimit sets or clears the maximum allowed song duration.
 func (h *SessionHandler) UpdateDurationLimit(w http.ResponseWriter, r *http.Request) {
 	sessionID := chi.URLParam(r, "id")
 	claims := middleware.GetClaims(r.Context())
@@ -355,6 +366,7 @@ func (h *SessionHandler) UpdateDurationLimit(w http.ResponseWriter, r *http.Requ
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
+// GetProhibitedPatterns returns all artist/title patterns that block song requests.
 func (h *SessionHandler) GetProhibitedPatterns(w http.ResponseWriter, r *http.Request) {
 	sessionID := chi.URLParam(r, "id")
 	claims := middleware.GetClaims(r.Context())
@@ -387,6 +399,7 @@ func (h *SessionHandler) GetProhibitedPatterns(w http.ResponseWriter, r *http.Re
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// CreateProhibitedPattern adds a new pattern to block certain artists or song titles.
 func (h *SessionHandler) CreateProhibitedPattern(w http.ResponseWriter, r *http.Request) {
 	sessionID := chi.URLParam(r, "id")
 	claims := middleware.GetClaims(r.Context())
@@ -434,6 +447,7 @@ func (h *SessionHandler) CreateProhibitedPattern(w http.ResponseWriter, r *http.
 	})
 }
 
+// DeleteProhibitedPattern removes a blocked pattern by its ID.
 func (h *SessionHandler) DeleteProhibitedPattern(w http.ResponseWriter, r *http.Request) {
 	sessionID := chi.URLParam(r, "id")
 	patternIDStr := chi.URLParam(r, "patternId")

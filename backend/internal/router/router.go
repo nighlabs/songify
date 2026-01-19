@@ -1,3 +1,5 @@
+// Package router configures the HTTP routes and middleware for the API.
+// It wires together handlers, services, and middleware into a chi router.
 package router
 
 import (
@@ -12,6 +14,12 @@ import (
 	"github.com/songify/backend/internal/services"
 )
 
+// New creates and configures the HTTP router with all routes and middleware.
+// The router is organized into:
+//   - Public routes: health check, config, admin verification
+//   - Session routes: create, join, rejoin (unauthenticated)
+//   - Protected session routes: requires JWT auth
+//   - Admin-only routes: settings, patterns, request moderation
 func New(cfg *config.Config, queries *db.Queries) http.Handler {
 	r := chi.NewRouter()
 

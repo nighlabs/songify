@@ -14,14 +14,17 @@ import (
 	"github.com/songify/backend/internal/services"
 )
 
+// RequestHandler manages song request operations: listing, submitting, and moderation.
 type RequestHandler struct {
 	queries *db.Queries
 }
 
+// NewRequestHandler creates a RequestHandler with the given database queries.
 func NewRequestHandler(queries *db.Queries) *RequestHandler {
 	return &RequestHandler{queries: queries}
 }
 
+// List returns all song requests for the session, ordered by request time.
 func (h *RequestHandler) List(w http.ResponseWriter, r *http.Request) {
 	sessionID := chi.URLParam(r, "id")
 	claims := middleware.GetClaims(r.Context())
@@ -45,6 +48,8 @@ func (h *RequestHandler) List(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, response)
 }
 
+// Submit adds a new song request after validating against session rules.
+// Checks for duplicates, duration limits, and prohibited patterns.
 func (h *RequestHandler) Submit(w http.ResponseWriter, r *http.Request) {
 	sessionID := chi.URLParam(r, "id")
 	claims := middleware.GetClaims(r.Context())
@@ -121,6 +126,7 @@ func (h *RequestHandler) Submit(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, songRequestToResponse(songRequest))
 }
 
+// Approve marks a pending song request as approved (admin only).
 func (h *RequestHandler) Approve(w http.ResponseWriter, r *http.Request) {
 	sessionID := chi.URLParam(r, "id")
 	requestID := chi.URLParam(r, "rid")
@@ -164,6 +170,7 @@ func (h *RequestHandler) Approve(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, songRequestToResponse(updatedRequest))
 }
 
+// Reject marks a pending song request as rejected with an optional reason (admin only).
 func (h *RequestHandler) Reject(w http.ResponseWriter, r *http.Request) {
 	sessionID := chi.URLParam(r, "id")
 	requestID := chi.URLParam(r, "rid")
@@ -218,6 +225,8 @@ func (h *RequestHandler) Reject(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, songRequestToResponse(updatedRequest))
 }
 
+// ArchiveAll deletes all song requests for the session (admin only).
+// Useful for clearing the queue when reusing a session.
 func (h *RequestHandler) ArchiveAll(w http.ResponseWriter, r *http.Request) {
 	sessionID := chi.URLParam(r, "id")
 	claims := middleware.GetClaims(r.Context())
@@ -235,6 +244,7 @@ func (h *RequestHandler) ArchiveAll(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
+// songRequestToResponse converts a database song request to the API response format.
 func songRequestToResponse(req db.SongRequest) models.SongRequestResponse {
 	resp := models.SongRequestResponse{
 		ID:             req.ID,
@@ -261,6 +271,7 @@ func songRequestToResponse(req db.SongRequest) models.SongRequestResponse {
 	return resp
 }
 
+// containsIgnoreCase checks if substr appears in s (case-insensitive).
 func containsIgnoreCase(s, substr string) bool {
 	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
 }

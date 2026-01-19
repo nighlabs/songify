@@ -13,6 +13,8 @@ import (
 	"time"
 )
 
+// SpotifyService provides access to the Spotify Web API for track searches.
+// It handles OAuth2 client credentials flow and caches access tokens.
 type SpotifyService struct {
 	clientID     string
 	clientSecret string
@@ -22,12 +24,14 @@ type SpotifyService struct {
 	mu           sync.RWMutex
 }
 
+// spotifyTokenResponse is the OAuth2 token response from Spotify.
 type spotifyTokenResponse struct {
 	AccessToken string `json:"access_token"`
 	TokenType   string `json:"token_type"`
 	ExpiresIn   int    `json:"expires_in"`
 }
 
+// SpotifyTrack represents a track from the Spotify API.
 type SpotifyTrack struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
@@ -58,6 +62,7 @@ type SpotifySearchResponse struct {
 	} `json:"tracks"`
 }
 
+// NewSpotifyService creates a SpotifyService with the given client credentials.
 func NewSpotifyService(clientID, clientSecret string) *SpotifyService {
 	return &SpotifyService{
 		clientID:     clientID,
@@ -68,6 +73,8 @@ func NewSpotifyService(clientID, clientSecret string) *SpotifyService {
 	}
 }
 
+// getAccessToken returns a valid access token, refreshing if expired.
+// Uses double-checked locking to minimize lock contention.
 func (s *SpotifyService) getAccessToken(ctx context.Context) (string, error) {
 	s.mu.RLock()
 	if s.token != "" && time.Now().Before(s.tokenExpiry) {
@@ -119,6 +126,8 @@ func (s *SpotifyService) getAccessToken(ctx context.Context) (string, error) {
 	return s.token, nil
 }
 
+// Search queries Spotify for tracks matching the given search string.
+// Limit defaults to 20 if not specified or out of range (1-50).
 func (s *SpotifyService) Search(ctx context.Context, query string, limit int) ([]SpotifyTrack, error) {
 	token, err := s.getAccessToken(ctx)
 	if err != nil {
@@ -158,6 +167,7 @@ func (s *SpotifyService) Search(ctx context.Context, query string, limit int) ([
 	return searchResp.Tracks.Items, nil
 }
 
+// GetTrack retrieves a single track by its Spotify ID.
 func (s *SpotifyService) GetTrack(ctx context.Context, trackID string) (*SpotifyTrack, error) {
 	token, err := s.getAccessToken(ctx)
 	if err != nil {

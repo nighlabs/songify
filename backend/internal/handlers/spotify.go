@@ -7,14 +7,17 @@ import (
 	"github.com/songify/backend/internal/services"
 )
 
+// SpotifyHandler handles Spotify track search requests.
 type SpotifyHandler struct {
 	spotifyService *services.SpotifyService
 }
 
+// NewSpotifyHandler creates a SpotifyHandler with the given Spotify service.
 func NewSpotifyHandler(spotifyService *services.SpotifyService) *SpotifyHandler {
 	return &SpotifyHandler{spotifyService: spotifyService}
 }
 
+// Search handles track search queries, returning matching tracks from Spotify.
 func (h *SpotifyHandler) Search(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
 	if query == "" {

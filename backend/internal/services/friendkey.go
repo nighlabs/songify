@@ -9,6 +9,7 @@ import (
 	"github.com/songify/backend/internal/db"
 )
 
+// Word lists for generating memorable friend keys (e.g., "happy-panda-42").
 var adjectives = []string{
 	"happy", "silly", "clever", "brave", "swift",
 	"gentle", "wild", "calm", "bright", "cool",
@@ -23,11 +24,14 @@ var nouns = []string{
 	"zebra", "lion", "wolf", "deer", "hawk",
 }
 
+// FriendKeyService generates unique, human-readable keys for session sharing.
+// Keys follow the pattern "adjective-noun-number" (e.g., "happy-panda-42").
 type FriendKeyService struct {
 	queries *db.Queries
 	rng     *rand.Rand
 }
 
+// NewFriendKeyService creates a FriendKeyService with its own random source.
 func NewFriendKeyService(queries *db.Queries) *FriendKeyService {
 	return &FriendKeyService{
 		queries: queries,
@@ -35,6 +39,8 @@ func NewFriendKeyService(queries *db.Queries) *FriendKeyService {
 	}
 }
 
+// Generate creates a unique friend key, retrying if collisions occur.
+// Returns an error if no unique key can be found after 100 attempts.
 func (s *FriendKeyService) Generate(ctx context.Context) (string, error) {
 	maxAttempts := 100
 	for i := 0; i < maxAttempts; i++ {

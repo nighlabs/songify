@@ -1,3 +1,5 @@
+// Package config handles loading application configuration from environment variables.
+// All settings have sensible defaults for local development.
 package config
 
 import (
@@ -7,6 +9,7 @@ import (
 	"time"
 )
 
+// Config holds all application settings loaded from environment variables.
 type Config struct {
 	Port                  string
 	DatabasePath          string
@@ -21,6 +24,7 @@ type Config struct {
 	TrustedProxies        []string
 }
 
+// Load reads configuration from environment variables, using defaults where not set.
 func Load() *Config {
 	return &Config{
 		Port:                  getEnv("PORT", "8080"),
