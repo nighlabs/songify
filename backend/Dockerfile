@@ -21,9 +21,14 @@ FROM alpine:3.23
 
 WORKDIR /app
 
-# Install runtime dependencies and create non-root user
+# Build args for customizable UID/GID (useful for bind mount permissions)
+ARG UID=10001
+ARG GID=10001
+
+# Install runtime dependencies and create non-root user with known UID/GID
 RUN apk add --no-cache ca-certificates tzdata \
-    && adduser -D -g '' appuser
+    && addgroup -g ${GID} -S appgroup \
+    && adduser -u ${UID} -G appgroup -D -S appuser
 
 # Copy binary from builder
 COPY --from=builder /app/server .
