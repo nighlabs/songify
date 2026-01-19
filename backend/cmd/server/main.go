@@ -1,3 +1,5 @@
+// Package main is the entry point for the Songify backend server.
+// It initializes logging, configuration, database, and starts the HTTP server.
 package main
 
 import (

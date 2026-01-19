@@ -1,3 +1,5 @@
+// Package middleware provides HTTP middleware for authentication, authorization,
+// CORS handling, rate limiting, and request context management.
 package middleware
 
 import (
@@ -12,9 +14,12 @@ import (
 type contextKey string
 
 const (
+	// ClaimsKey is the context key for storing JWT claims.
 	ClaimsKey contextKey = "claims"
 )
 
+// AuthMiddleware validates JWT tokens and adds claims to the request context.
+// Returns 401 for missing/invalid tokens.
 func AuthMiddleware(authService *services.AuthService) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -45,6 +50,8 @@ func AuthMiddleware(authService *services.AuthService) func(http.Handler) http.H
 	}
 }
 
+// AdminOnlyMiddleware restricts access to admin users only.
+// Must be used after AuthMiddleware. Returns 403 for non-admin users.
 func AdminOnlyMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		claims, ok := r.Context().Value(ClaimsKey).(*services.Claims)
@@ -57,6 +64,8 @@ func AdminOnlyMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+// GetClaims retrieves the JWT claims from the request context.
+// Returns nil if no claims are present (e.g., unauthenticated request).
 func GetClaims(ctx context.Context) *services.Claims {
 	claims, _ := ctx.Value(ClaimsKey).(*services.Claims)
 	return claims

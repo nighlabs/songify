@@ -6,10 +6,12 @@ import (
 	"github.com/songify/backend/internal/config"
 )
 
+// ConfigHandler exposes public configuration to the frontend.
 type ConfigHandler struct {
 	cfg *config.Config
 }
 
+// NewConfigHandler creates a ConfigHandler with the given configuration.
 func NewConfigHandler(cfg *config.Config) *ConfigHandler {
 	return &ConfigHandler{cfg: cfg}
 }

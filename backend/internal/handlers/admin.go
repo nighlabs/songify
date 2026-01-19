@@ -1,3 +1,5 @@
+// Package handlers contains HTTP request handlers for the Songify API.
+// Each handler file corresponds to a specific resource or feature area.
 package handlers
 
 import (
@@ -14,14 +16,18 @@ import (
 	"golang.org/x/crypto/scrypt"
 )
 
+// AdminHandler handles admin portal authentication.
 type AdminHandler struct {
 	cfg *config.Config
 }
 
+// NewAdminHandler creates an AdminHandler with the given configuration.
 func NewAdminHandler(cfg *config.Config) *AdminHandler {
 	return &AdminHandler{cfg: cfg}
 }
 
+// VerifyPassword checks if the provided password hash matches the admin portal password.
+// The hash uses the current UTC day as a salt to prevent replay attacks.
 func (h *AdminHandler) VerifyPassword(w http.ResponseWriter, r *http.Request) {
 	var req models.VerifyAdminRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

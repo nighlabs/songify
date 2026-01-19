@@ -1,3 +1,6 @@
+// Package logging provides structured logging utilities using Go's slog package.
+// It includes security event logging, request context tracking, and automatic
+// error formatting with stack traces via go-xerrors.
 package logging
 
 import (

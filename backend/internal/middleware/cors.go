@@ -5,6 +5,8 @@ import (
 	"strings"
 )
 
+// CORSMiddleware handles Cross-Origin Resource Sharing headers.
+// It allows requests from the configured origins and handles preflight OPTIONS requests.
 func CORSMiddleware(allowedOrigins []string) func(http.Handler) http.Handler {
 	allowedMap := make(map[string]bool)
 	for _, origin := range allowedOrigins {
@@ -36,6 +38,8 @@ func CORSMiddleware(allowedOrigins []string) func(http.Handler) http.Handler {
 	}
 }
 
+// RequestLogger is a placeholder for request logging middleware.
+// Currently only skips logging for health check endpoints.
 func RequestLogger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Skip logging for health checks

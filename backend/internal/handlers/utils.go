@@ -9,6 +9,7 @@ import (
 	"github.com/songify/backend/internal/models"
 )
 
+// writeJSON serializes data as JSON and writes it to the response.
 func writeJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
