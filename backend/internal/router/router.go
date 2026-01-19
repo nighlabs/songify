@@ -16,9 +16,9 @@ func New(cfg *config.Config, queries *db.Queries) http.Handler {
 	r := chi.NewRouter()
 
 	// Global middleware
-	r.Use(chimiddleware.Logger)
 	r.Use(chimiddleware.Recoverer)
 	r.Use(chimiddleware.RealIP)
+	r.Use(middleware.RequestContextMiddleware)
 	r.Use(middleware.CORSMiddleware(cfg.CORSAllowedOrigins))
 
 	// Services
@@ -64,6 +64,7 @@ func New(cfg *config.Config, queries *db.Queries) http.Handler {
 			// Protected session routes
 			r.Route("/{id}", func(r chi.Router) {
 				r.Use(middleware.AuthMiddleware(authService))
+				r.Use(middleware.UpdateRequestContextMiddleware)
 
 				r.Get("/", sessionHandler.Get)
 				r.Put("/playlist", sessionHandler.UpdatePlaylist)

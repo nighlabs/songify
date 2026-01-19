@@ -24,7 +24,7 @@ func (h *SpotifyHandler) Search(w http.ResponseWriter, r *http.Request) {
 
 	tracks, err := h.spotifyService.Search(r.Context(), query, 20)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "search failed: "+err.Error())
+		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "search failed", err)
 		return
 	}
 

@@ -33,7 +33,7 @@ func (h *RequestHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	requests, err := h.queries.GetSongRequestsBySessionID(r.Context(), sessionID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to fetch requests")
+		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to fetch requests", err)
 		return
 	}
 
@@ -63,7 +63,7 @@ func (h *RequestHandler) Submit(w http.ResponseWriter, r *http.Request) {
 	// Get session to check limits and patterns
 	session, err := h.queries.GetSessionByID(r.Context(), sessionID)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "session not found")
+		writeErrorWithCause(r.Context(), w, http.StatusNotFound, "session not found", err)
 		return
 	}
 
@@ -114,7 +114,7 @@ func (h *RequestHandler) Submit(w http.ResponseWriter, r *http.Request) {
 		SpotifyUri:     req.SpotifyURI,
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to create request")
+		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to create request", err)
 		return
 	}
 
@@ -140,7 +140,7 @@ func (h *RequestHandler) Approve(w http.ResponseWriter, r *http.Request) {
 	// Verify request belongs to this session
 	songRequest, err := h.queries.GetSongRequestByID(r.Context(), rid)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "request not found")
+		writeErrorWithCause(r.Context(), w, http.StatusNotFound, "request not found", err)
 		return
 	}
 
@@ -150,14 +150,14 @@ func (h *RequestHandler) Approve(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.queries.ApproveSongRequest(r.Context(), rid); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to approve request")
+		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to approve request", err)
 		return
 	}
 
 	// Fetch updated request
 	updatedRequest, err := h.queries.GetSongRequestByID(r.Context(), rid)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to fetch updated request")
+		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to fetch updated request", err)
 		return
 	}
 
@@ -186,7 +186,7 @@ func (h *RequestHandler) Reject(w http.ResponseWriter, r *http.Request) {
 	// Verify request belongs to this session
 	songRequest, err := h.queries.GetSongRequestByID(r.Context(), rid)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "request not found")
+		writeErrorWithCause(r.Context(), w, http.StatusNotFound, "request not found", err)
 		return
 	}
 
@@ -204,14 +204,14 @@ func (h *RequestHandler) Reject(w http.ResponseWriter, r *http.Request) {
 		RejectionReason: reason,
 		ID:              rid,
 	}); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to reject request")
+		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to reject request", err)
 		return
 	}
 
 	// Fetch updated request
 	updatedRequest, err := h.queries.GetSongRequestByID(r.Context(), rid)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to fetch updated request")
+		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to fetch updated request", err)
 		return
 	}
 

@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/songify/backend/internal/db"
+	"github.com/songify/backend/internal/logging"
 	"github.com/songify/backend/internal/middleware"
 	"github.com/songify/backend/internal/models"
 	"github.com/songify/backend/internal/services"
@@ -62,7 +63,7 @@ func (h *SessionHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	friendKey, err := h.friendKeyService.Generate(r.Context())
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to generate friend key")
+		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to generate friend key", err)
 		return
 	}
 
@@ -87,7 +88,7 @@ func (h *SessionHandler) Create(w http.ResponseWriter, r *http.Request) {
 		SongDurationLimitMs: durationLimit,
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to create session")
+		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to create session", err)
 		return
 	}
 
@@ -113,7 +114,7 @@ func (h *SessionHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	token, err := h.authService.GenerateToken(session.ID, services.RoleAdmin)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to generate token")
+		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to generate token", err)
 		return
 	}
 
@@ -139,7 +140,7 @@ func (h *SessionHandler) Join(w http.ResponseWriter, r *http.Request) {
 	// Find session by comparing hashed friend keys
 	sessions, err := h.queries.ListAllSessions(r.Context())
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to fetch sessions")
+		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to fetch sessions", err)
 		return
 	}
 
@@ -152,13 +153,14 @@ func (h *SessionHandler) Join(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if matchedSession == nil {
+		logging.LogSecurityEvent(r.Context(), logging.SecurityEventBadJoinCode, "invalid friend key hash")
 		writeError(w, http.StatusNotFound, "session not found")
 		return
 	}
 
 	token, err := h.authService.GenerateToken(matchedSession.ID, services.RoleFriend)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to generate token")
+		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to generate token", err)
 		return
 	}
 
@@ -182,34 +184,36 @@ func (h *SessionHandler) Rejoin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Find session by comparing hashed friend keys
-	sessions, err := h.queries.ListAllSessions(r.Context())
+	allSessions, err := h.queries.ListAllSessions(r.Context())
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to fetch sessions")
+		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to fetch sessions", err)
 		return
 	}
 
 	var matchedSession *db.Session
-	for i := range sessions {
-		if hashFriendKey(sessions[i].FriendAccessKey) == req.FriendKeyHash {
-			matchedSession = &sessions[i]
+	for i := range allSessions {
+		if hashFriendKey(allSessions[i].FriendAccessKey) == req.FriendKeyHash {
+			matchedSession = &allSessions[i]
 			break
 		}
 	}
 
 	if matchedSession == nil {
+		logging.LogSecurityEvent(r.Context(), logging.SecurityEventBadJoinCode, "invalid friend key hash on rejoin")
 		writeError(w, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
 
 	// Verify the admin password
 	if matchedSession.AdminPasswordHash != req.AdminPasswordHash {
+		logging.LogSecurityEvent(r.Context(), logging.SecurityEventBadAdminPassword, "invalid admin password on rejoin")
 		writeError(w, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
 
 	token, err := h.authService.GenerateToken(matchedSession.ID, services.RoleAdmin)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to generate token")
+		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to generate token", err)
 		return
 	}
 
@@ -232,7 +236,7 @@ func (h *SessionHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	session, err := h.queries.GetSessionByID(r.Context(), sessionID)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "session not found")
+		writeErrorWithCause(r.Context(), w, http.StatusNotFound, "session not found", err)
 		return
 	}
 
@@ -307,7 +311,7 @@ func (h *SessionHandler) UpdatePlaylist(w http.ResponseWriter, r *http.Request) 
 		SpotifyPlaylistName: sql.NullString{String: req.SpotifyPlaylistName, Valid: req.SpotifyPlaylistName != ""},
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to update playlist")
+		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to update playlist", err)
 		return
 	}
 
@@ -344,7 +348,7 @@ func (h *SessionHandler) UpdateDurationLimit(w http.ResponseWriter, r *http.Requ
 		SongDurationLimitMs: durationLimit,
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to update duration limit")
+		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to update duration limit", err)
 		return
 	}
 
@@ -367,7 +371,7 @@ func (h *SessionHandler) GetProhibitedPatterns(w http.ResponseWriter, r *http.Re
 
 	patterns, err := h.queries.GetProhibitedPatternsBySessionID(r.Context(), sessionID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to fetch patterns")
+		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to fetch patterns", err)
 		return
 	}
 
@@ -419,7 +423,7 @@ func (h *SessionHandler) CreateProhibitedPattern(w http.ResponseWriter, r *http.
 		Pattern:     req.Pattern,
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to create pattern")
+		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to create pattern", err)
 		return
 	}
 
@@ -452,7 +456,7 @@ func (h *SessionHandler) DeleteProhibitedPattern(w http.ResponseWriter, r *http.
 	}
 
 	if err := h.queries.DeleteProhibitedPattern(r.Context(), patternID); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to delete pattern")
+		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to delete pattern", err)
 		return
 	}
 
