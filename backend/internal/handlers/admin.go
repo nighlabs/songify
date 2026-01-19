@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/songify/backend/internal/config"
+	"github.com/songify/backend/internal/logging"
 	"github.com/songify/backend/internal/models"
 	"golang.org/x/crypto/scrypt"
 )
@@ -33,6 +34,10 @@ func (h *AdminHandler) VerifyPassword(w http.ResponseWriter, r *http.Request) {
 	expectedHash := hashWithScrypt(h.cfg.AdminPortalPassword, utcDay)
 
 	valid := req.PasswordHash == expectedHash
+
+	if !valid {
+		logging.LogSecurityEvent(r.Context(), logging.SecurityEventBadAdminPassword, "invalid admin portal password")
+	}
 
 	writeJSON(w, http.StatusOK, models.VerifyAdminResponse{Valid: valid})
 }

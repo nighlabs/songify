@@ -1,29 +1,36 @@
 package main
 
 import (
-	"log"
+	"log/slog"
 	"net/http"
+	"os"
 
 	"github.com/songify/backend/internal/config"
 	"github.com/songify/backend/internal/database"
 	"github.com/songify/backend/internal/db"
+	"github.com/songify/backend/internal/logging"
 	"github.com/songify/backend/internal/router"
 )
 
 func main() {
+	// Initialize structured logging (reads LOGGING_LEVEL env var)
+	logging.Initialize()
+
 	// Load configuration
 	cfg := config.Load()
 
 	// Initialize database
 	sqlDB, err := database.New(cfg.DatabasePath)
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		slog.Error("failed to connect to database", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
 	defer sqlDB.Close()
 
 	// Run migrations
 	if err := database.RunMigrations(sqlDB); err != nil {
-		log.Fatalf("Failed to run migrations: %v", err)
+		slog.Error("failed to run migrations", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
 
 	// Initialize queries
@@ -34,10 +41,11 @@ func main() {
 
 	// Start server
 	addr := ":" + cfg.Port
-	log.Printf("Starting server on %s", addr)
-	log.Printf("Frontend should connect to http://localhost%s", addr)
+	slog.Info("starting server", slog.String("addr", addr))
+	slog.Info("frontend should connect to", slog.String("url", "http://localhost"+addr))
 
 	if err := http.ListenAndServe(addr, r); err != nil {
-		log.Fatalf("Server failed: %v", err)
+		slog.Error("server failed", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
 }

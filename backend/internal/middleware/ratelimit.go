@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/songify/backend/internal/logging"
 	"golang.org/x/time/rate"
 )
 
@@ -71,6 +72,7 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 
 		limiter := rl.getVisitor(ip)
 		if !limiter.Allow() {
+			logging.LogSecurityEvent(r.Context(), logging.SecurityEventRateLimited, "rate limit exceeded")
 			http.Error(w, `{"error":"rate limit exceeded"}`, http.StatusTooManyRequests)
 			return
 		}
