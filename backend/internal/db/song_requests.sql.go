@@ -66,6 +66,15 @@ func (q *Queries) CreateSongRequest(ctx context.Context, arg CreateSongRequestPa
 	return i, err
 }
 
+const deleteAllSongRequestsBySessionID = `-- name: DeleteAllSongRequestsBySessionID :exec
+DELETE FROM song_requests WHERE session_id = ?
+`
+
+func (q *Queries) DeleteAllSongRequestsBySessionID(ctx context.Context, sessionID string) error {
+	_, err := q.db.ExecContext(ctx, deleteAllSongRequestsBySessionID, sessionID)
+	return err
+}
+
 const deleteSongRequest = `-- name: DeleteSongRequest :exec
 DELETE FROM song_requests WHERE id = ?
 `
