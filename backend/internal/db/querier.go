@@ -13,6 +13,7 @@ type Querier interface {
 	CreateProhibitedPattern(ctx context.Context, arg CreateProhibitedPatternParams) (ProhibitedPattern, error)
 	CreateSession(ctx context.Context, arg CreateSessionParams) (Session, error)
 	CreateSongRequest(ctx context.Context, arg CreateSongRequestParams) (SongRequest, error)
+	DeleteAllSongRequestsBySessionID(ctx context.Context, sessionID string) error
 	DeleteProhibitedPattern(ctx context.Context, id int64) error
 	DeleteProhibitedPatternsBySessionID(ctx context.Context, sessionID string) error
 	DeleteSession(ctx context.Context, id string) error

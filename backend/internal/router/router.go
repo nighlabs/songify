@@ -17,7 +17,8 @@ func New(cfg *config.Config, queries *db.Queries) http.Handler {
 
 	// Global middleware
 	r.Use(chimiddleware.Recoverer)
-	r.Use(chimiddleware.RealIP)
+	realIPMiddleware := middleware.NewRealIPMiddleware(cfg.TrustedProxies)
+	r.Use(realIPMiddleware.Handler)
 	r.Use(middleware.RequestContextMiddleware)
 	r.Use(middleware.CORSMiddleware(cfg.CORSAllowedOrigins))
 
@@ -87,6 +88,9 @@ func New(cfg *config.Config, queries *db.Queries) http.Handler {
 				r.Route("/requests", func(r chi.Router) {
 					r.Get("/", requestHandler.List)
 					r.Post("/", requestHandler.Submit)
+
+					// Admin-only: archive all requests
+					r.With(middleware.AdminOnlyMiddleware).Delete("/", requestHandler.ArchiveAll)
 
 					// Admin-only actions
 					r.Route("/{rid}", func(r chi.Router) {
