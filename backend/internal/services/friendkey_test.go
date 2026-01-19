@@ -5,23 +5,21 @@ import (
 	"testing"
 )
 
+func TestWordlistPopulated(t *testing.T) {
+	// BIP39 wordlist should have exactly 2048 words
+	if len(wordlist) != 2048 {
+		t.Errorf("wordlist should have 2048 words, got %d", len(wordlist))
+	}
+}
+
 func TestFriendKeyFormat(t *testing.T) {
-	// Test that adjectives and nouns arrays are populated
-	if len(adjectives) == 0 {
-		t.Error("adjectives array should not be empty")
-	}
-
-	if len(nouns) == 0 {
-		t.Error("nouns array should not be empty")
-	}
-
-	// Verify format pattern matches expected: adjective-noun-number
+	// Verify format pattern matches expected: word-word-number
 	pattern := regexp.MustCompile(`^[a-z]+-[a-z]+-\d+$`)
 
 	// Generate some sample keys manually to verify format
-	for _, adj := range adjectives[:3] {
-		for _, noun := range nouns[:3] {
-			key := adj + "-" + noun + "-42"
+	for _, word1 := range wordlist[:3] {
+		for _, word2 := range wordlist[:3] {
+			key := word1 + "-" + word2 + "-42"
 			if !pattern.MatchString(key) {
 				t.Errorf("Key %q does not match expected pattern", key)
 			}
@@ -29,20 +27,12 @@ func TestFriendKeyFormat(t *testing.T) {
 	}
 }
 
-func TestAdjectivesAndNounsUnique(t *testing.T) {
-	adjSet := make(map[string]bool)
-	for _, adj := range adjectives {
-		if adjSet[adj] {
-			t.Errorf("Duplicate adjective: %s", adj)
+func TestWordlistUnique(t *testing.T) {
+	wordSet := make(map[string]bool)
+	for _, word := range wordlist {
+		if wordSet[word] {
+			t.Errorf("Duplicate word: %s", word)
 		}
-		adjSet[adj] = true
-	}
-
-	nounSet := make(map[string]bool)
-	for _, noun := range nouns {
-		if nounSet[noun] {
-			t.Errorf("Duplicate noun: %s", noun)
-		}
-		nounSet[noun] = true
+		wordSet[word] = true
 	}
 }
