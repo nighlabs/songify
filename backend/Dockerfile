@@ -34,7 +34,7 @@ RUN apk add --no-cache ca-certificates tzdata \
 COPY --from=builder /app/server .
 
 # Create data directory for SQLite
-RUN mkdir -p /data && chown appuser:appuser /data
+RUN mkdir -p /data && chown appuser:appgroup /data
 
 # Switch to non-root user
 USER appuser
