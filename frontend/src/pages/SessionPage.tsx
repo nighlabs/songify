@@ -76,11 +76,13 @@ function StatusBadge({ status }: { status: string }) {
 function SpotifyStatus({
   playlistId,
   playlistName,
+  isAuthenticated,
   onConnect,
   onChangePlaylist
 }: {
   playlistId: string | null | undefined
   playlistName: string | null | undefined
+  isAuthenticated: boolean
   onConnect: () => void
   onChangePlaylist: () => void
 }) {
@@ -98,7 +100,7 @@ function SpotifyStatus({
 
   // Fetch full playlist details from Spotify if authenticated (to get image)
   useEffect(() => {
-    if (!playlistId || !isSpotifyAuthenticated()) {
+    if (!playlistId || !isAuthenticated) {
       return
     }
 
@@ -131,7 +133,7 @@ function SpotifyStatus({
     return () => {
       controller.abort()
     }
-  }, [playlistId])
+  }, [playlistId, isAuthenticated])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -144,7 +146,7 @@ function SpotifyStatus({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const isConnected = isSpotifyAuthenticated()
+  const isConnected = isAuthenticated
 
   if (!playlistId) {
     return (
@@ -468,6 +470,7 @@ export function SessionPage() {
                   key={session?.spotifyPlaylistId || 'no-playlist'}
                   playlistId={session?.spotifyPlaylistId}
                   playlistName={session?.spotifyPlaylistName}
+                  isAuthenticated={isSpotifyAuthenticated()}
                   onConnect={handleSpotifyAuth}
                   onChangePlaylist={handleSpotifyAuth}
                 />
