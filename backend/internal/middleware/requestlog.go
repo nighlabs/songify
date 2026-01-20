@@ -4,10 +4,9 @@ import (
 	"net/http"
 
 	"github.com/songify/backend/internal/logging"
-	"github.com/songify/backend/internal/services"
 )
 
-// RequestContextMiddleware adds request attributes to context early in the middleware chain
+// RequestContextMiddleware adds request attributes to context early in the middleware chain.
 func RequestContextMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		attrs := &logging.RequestAttrs{
@@ -20,7 +19,7 @@ func RequestContextMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// UpdateRequestContextMiddleware updates context with auth info after AuthMiddleware runs
+// UpdateRequestContextMiddleware updates context with auth info after AuthMiddleware runs.
 func UpdateRequestContextMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		claims := GetClaims(r.Context())
@@ -30,22 +29,4 @@ func UpdateRequestContextMiddleware(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
-}
-
-// RequestContextFromClaims creates request attributes from existing claims
-// Used for updating context after authentication
-func RequestContextFromClaims(r *http.Request, claims *services.Claims) *logging.RequestAttrs {
-	attrs := logging.GetRequestAttrs(r.Context())
-	if attrs == nil {
-		attrs = &logging.RequestAttrs{
-			Method: r.Method,
-			Path:   r.URL.Path,
-			IP:     logging.ExtractClientIP(r),
-		}
-	}
-	if claims != nil {
-		attrs.SessionID = claims.SessionID
-		attrs.Role = string(claims.Role)
-	}
-	return attrs
 }

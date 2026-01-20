@@ -72,11 +72,13 @@ func (rl *RateLimiter) cleanupVisitors() {
 
 // Middleware returns the HTTP middleware that enforces rate limiting.
 // Returns 429 Too Many Requests when the limit is exceeded.
+// Note: Should be placed after RealIPMiddleware in the chain to use the correct client IP.
 func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ip := r.RemoteAddr
-		if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
-			ip = forwarded
+		// Use X-Real-IP header set by RealIPMiddleware, fall back to RemoteAddr
+		ip := r.Header.Get("X-Real-IP")
+		if ip == "" {
+			ip = r.RemoteAddr
 		}
 
 		limiter := rl.getVisitor(ip)

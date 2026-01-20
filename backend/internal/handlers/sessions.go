@@ -2,21 +2,18 @@ package handlers
 
 import (
 	"database/sql"
-	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"strconv"
-	"strings"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/songify/backend/internal/crypto"
 	"github.com/songify/backend/internal/db"
 	"github.com/songify/backend/internal/logging"
 	"github.com/songify/backend/internal/middleware"
 	"github.com/songify/backend/internal/models"
 	"github.com/songify/backend/internal/services"
-	"golang.org/x/crypto/scrypt"
 )
 
 // SessionHandler manages session lifecycle: creation, joining, and settings.
@@ -33,22 +30,6 @@ func NewSessionHandler(queries *db.Queries, authService *services.AuthService, f
 		authService:      authService,
 		friendKeyService: friendKeyService,
 	}
-}
-
-// hashFriendKey hashes a friend key using scrypt with UTC day as salt
-// Parameters match the frontend: N=16384, r=8, p=1, keyLen=32
-func hashFriendKey(friendKey string) string {
-	// Normalize the key the same way as frontend
-	normalizedKey := strings.ToLower(strings.TrimSpace(friendKey))
-	// Use UTC day as salt (same as admin portal password)
-	utcDay := strconv.Itoa(time.Now().UTC().Day())
-	saltBytes := []byte(utcDay)
-	// N=16384 (2^14), r=8, p=1, keyLen=32
-	dk, err := scrypt.Key([]byte(normalizedKey), saltBytes, 16384, 8, 1, 32)
-	if err != nil {
-		return ""
-	}
-	return hex.EncodeToString(dk)
 }
 
 // Create initializes a new session with the admin as owner.
@@ -152,7 +133,7 @@ func (h *SessionHandler) Join(w http.ResponseWriter, r *http.Request) {
 
 	var matchedSession *db.Session
 	for i := range sessions {
-		if hashFriendKey(sessions[i].FriendAccessKey) == req.FriendKeyHash {
+		if crypto.HashFriendKey(sessions[i].FriendAccessKey) == req.FriendKeyHash {
 			matchedSession = &sessions[i]
 			break
 		}
@@ -200,7 +181,7 @@ func (h *SessionHandler) Rejoin(w http.ResponseWriter, r *http.Request) {
 
 	var matchedSession *db.Session
 	for i := range allSessions {
-		if hashFriendKey(allSessions[i].FriendAccessKey) == req.FriendKeyHash {
+		if crypto.HashFriendKey(allSessions[i].FriendAccessKey) == req.FriendKeyHash {
 			matchedSession = &allSessions[i]
 			break
 		}

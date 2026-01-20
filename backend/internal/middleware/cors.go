@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"net/http"
-	"strings"
 )
 
 // CORSMiddleware handles Cross-Origin Resource Sharing headers.
@@ -36,18 +35,4 @@ func CORSMiddleware(allowedOrigins []string) func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 		})
 	}
-}
-
-// RequestLogger is a placeholder for request logging middleware.
-// Currently only skips logging for health check endpoints.
-func RequestLogger(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Skip logging for health checks
-		if strings.HasSuffix(r.URL.Path, "/health") {
-			next.ServeHTTP(w, r)
-			return
-		}
-
-		next.ServeHTTP(w, r)
-	})
 }
