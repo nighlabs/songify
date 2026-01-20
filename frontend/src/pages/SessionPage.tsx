@@ -583,23 +583,23 @@ export function SessionPage() {
                         href={`https://open.spotify.com/track/${track.id}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity"
+                        className="flex items-center gap-3 min-w-0 hover:opacity-80 transition-opacity"
                       >
                         {track.albumArtUrl && (
                           <img
                             src={track.albumArtUrl}
                             alt={track.albumName}
-                            className="w-12 h-12 rounded"
+                            className="w-12 h-12 rounded flex-shrink-0"
                           />
                         )}
-                        <div className="flex-1 min-w-0">
+                        <div className="min-w-0">
                           <p className="font-medium truncate">{track.name}</p>
                           <p className="text-sm text-muted-foreground truncate">
                             {track.artists.join(', ')} • {track.albumName}
                           </p>
                         </div>
                       </a>
-                      <span className="text-sm text-muted-foreground">
+                      <span className="text-sm text-muted-foreground ml-auto flex-shrink-0">
                         {formatDuration(track.durationMs)}
                       </span>
                       {isBlocked ? (
@@ -670,23 +670,23 @@ export function SessionPage() {
                       href={`https://open.spotify.com/track/${request.spotifyTrackId}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity"
+                      className="flex items-center gap-3 min-w-0 hover:opacity-80 transition-opacity"
                     >
                       {request.albumArtUrl && (
                         <img
                           src={request.albumArtUrl}
                           alt={request.albumName}
-                          className="w-12 h-12 rounded"
+                          className="w-12 h-12 rounded flex-shrink-0"
                         />
                       )}
-                      <div className="flex-1 min-w-0">
+                      <div className="min-w-0">
                         <p className="font-medium truncate">{request.trackName}</p>
                         <p className="text-sm text-muted-foreground truncate">
                           {request.artistNames} • {request.albumName}
                         </p>
                       </div>
                     </a>
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-sm text-muted-foreground ml-auto flex-shrink-0">
                       {formatDuration(request.durationMs)}
                     </span>
                     <StatusBadge status={request.status} />
@@ -740,16 +740,16 @@ export function SessionPage() {
                       href={`https://open.spotify.com/track/${request.spotifyTrackId}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity"
+                      className="flex items-center gap-3 min-w-0 hover:opacity-80 transition-opacity"
                     >
                       {request.albumArtUrl && (
                         <img
                           src={request.albumArtUrl}
                           alt={request.albumName}
-                          className="w-12 h-12 rounded"
+                          className="w-12 h-12 rounded flex-shrink-0"
                         />
                       )}
-                      <div className="flex-1 min-w-0">
+                      <div className="min-w-0">
                         <p className="font-medium truncate">{request.trackName}</p>
                         <p className="text-sm text-muted-foreground truncate">
                           {request.artistNames}
@@ -761,7 +761,7 @@ export function SessionPage() {
                         )}
                       </div>
                     </a>
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-sm text-muted-foreground ml-auto flex-shrink-0">
                       {formatDuration(request.durationMs)}
                     </span>
                     <StatusBadge status={request.status} />
