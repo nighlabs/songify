@@ -70,7 +70,6 @@ export function TimeLimitDialog({
       onOpenChange(false)
       toast.success('Time limit updated')
     } catch {
-      setError('Failed to update time limit')
       toast.error('Failed to update time limit')
     } finally {
       setSaving(false)
@@ -86,7 +85,6 @@ export function TimeLimitDialog({
       onOpenChange(false)
       toast.success('Time limit cleared')
     } catch {
-      setError('Failed to clear time limit')
       toast.error('Failed to clear time limit')
     } finally {
       setSaving(false)

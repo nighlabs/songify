@@ -14,8 +14,6 @@ import { persist } from 'zustand/middleware'
 import type { AuthState } from '@/types'
 
 interface AuthStore extends AuthState {
-  /** Partial state update (for flexibility) */
-  setAuth: (auth: Partial<AuthState>) => void
   /** Set auth state after admin creates or rejoins a session */
   setAdminAuth: (token: string, sessionId: string, displayName: string, friendAccessKey: string) => void
   /** Set auth state after friend joins a session */
@@ -35,8 +33,6 @@ export const useAuthStore = create<AuthStore>()(
       isAdmin: false,
       displayName: null,
       friendAccessKey: null,
-
-      setAuth: (auth) => set((state) => ({ ...state, ...auth })),
 
       setAdminAuth: (token, sessionId, displayName, friendAccessKey) =>
         set({

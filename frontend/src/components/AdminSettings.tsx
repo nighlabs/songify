@@ -9,12 +9,14 @@
  * Each setting opens a dialog for detailed configuration.
  */
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { Settings, Clock, Ban, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { TimeLimitDialog } from '@/components/TimeLimitDialog'
 import { PatternsDialog } from '@/components/PatternsDialog'
 import { ArchiveDialog } from '@/components/ArchiveDialog'
+import { useClickOutside } from '@/hooks/useClickOutside'
+import { formatDuration } from '@/lib/utils'
 import type { Session } from '@/types'
 
 interface AdminSettingsProps {
@@ -29,15 +31,7 @@ export function AdminSettings({ session, onSessionUpdate }: AdminSettingsProps) 
   const [archiveOpen, setArchiveOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setDropdownOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+  useClickOutside(dropdownRef, useCallback(() => setDropdownOpen(false), []))
 
   return (
     <>
@@ -67,8 +61,7 @@ export function AdminSettings({ session, onSessionUpdate }: AdminSettingsProps) 
                 <span>Song Time Limit</span>
                 {session.songDurationLimitMs && (
                   <p className="text-xs text-muted-foreground">
-                    {Math.floor(session.songDurationLimitMs / 60000)}m{' '}
-                    {Math.floor((session.songDurationLimitMs % 60000) / 1000)}s
+                    {formatDuration(session.songDurationLimitMs)}
                   </p>
                 )}
               </div>

@@ -60,7 +60,6 @@ export function PatternsDialog({
       onUpdate()
       toast.success('Pattern added')
     } catch {
-      setError('Failed to add pattern')
       toast.error('Failed to add pattern')
     } finally {
       setAdding(false)
@@ -74,7 +73,6 @@ export function PatternsDialog({
       onUpdate()
       toast.success('Pattern removed')
     } catch {
-      setError('Failed to delete pattern')
       toast.error('Failed to delete pattern')
     } finally {
       setDeletingId(null)
