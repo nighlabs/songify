@@ -157,6 +157,5 @@ type ProhibitedPatternResponse struct {
 
 // ErrorResponse is the standard error format returned by all endpoints.
 type ErrorResponse struct {
-	Error   string `json:"error"`
-	Message string `json:"message,omitempty"`
+	Error string `json:"error"`
 }

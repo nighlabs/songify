@@ -188,7 +188,10 @@ func (h *RequestHandler) Reject(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req models.RejectSongRequestRequest
-	json.NewDecoder(r.Body).Decode(&req)
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
 
 	// Verify request belongs to this session
 	songRequest, err := h.queries.GetSongRequestByID(r.Context(), rid)

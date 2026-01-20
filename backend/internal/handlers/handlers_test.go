@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/songify/backend/internal/config"
+	"github.com/songify/backend/internal/crypto"
 	"github.com/songify/backend/internal/models"
 )
 
@@ -23,8 +24,8 @@ func TestAdminHandler_VerifyPassword(t *testing.T) {
 	utcDay := strconv.Itoa(time.Now().UTC().Day())
 
 	// Generate the correct hash for the test password
-	correctHash := hashWithScrypt("test-password", utcDay)
-	wrongHash := hashWithScrypt("wrong-password", utcDay)
+	correctHash := crypto.HashWithScrypt("test-password", utcDay)
+	wrongHash := crypto.HashWithScrypt("wrong-password", utcDay)
 
 	tests := []struct {
 		name           string
