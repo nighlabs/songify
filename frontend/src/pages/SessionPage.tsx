@@ -281,23 +281,24 @@ export function SessionPage() {
     }
   }, [sessionId, id, navigate])
 
-  // Try to restore Spotify session from stored token on mount (admin only)
-  useEffect(() => {
-    if (isAdmin) {
-      tryRestoreSpotifySession().then((restored) => {
-        if (restored) {
-          setSpotifyRestored(true) // Trigger re-render to update SpotifyStatus
-        }
-      })
-    }
-  }, [isAdmin])
-
   // Fetch session details
   const { data: session, isLoading: sessionLoading } = useQuery<Session>({
     queryKey: ['session', id],
     queryFn: () => api.getSession(id!),
     enabled: !!id,
   })
+
+  // Try to restore Spotify session from stored token (admin only)
+  // Runs after session loads so we can verify the linked playlist
+  useEffect(() => {
+    if (isAdmin && session?.spotifyPlaylistId) {
+      tryRestoreSpotifySession(session.spotifyPlaylistId).then((restored) => {
+        if (restored) {
+          setSpotifyRestored(true) // Trigger re-render to update SpotifyStatus
+        }
+      })
+    }
+  }, [isAdmin, session?.spotifyPlaylistId])
 
   // Fetch song requests with polling
   const { data: requests = [], isLoading: requestsLoading } = useQuery<SongRequest[]>({
