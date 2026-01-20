@@ -512,12 +512,27 @@ export function SessionPage() {
           </CardHeader>
           <CardContent>
             <div className="flex gap-2">
-              <Input
-                placeholder="Search for a song..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              />
+              <div className="relative flex-1">
+                <Input
+                  placeholder="Search for a song..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  className={searchQuery || searchResults.length > 0 ? 'pr-8' : ''}
+                />
+                {(searchQuery || searchResults.length > 0) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery('')
+                      setSearchResults([])
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
               <Button onClick={handleSearch} disabled={isSearching}>
                 {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Search'}
               </Button>
