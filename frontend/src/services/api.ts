@@ -188,11 +188,6 @@ export const api = {
 
   // ----- Prohibited Patterns -----
 
-  /** Get all prohibition patterns for a session */
-  getProhibitedPatterns: async (sessionId: string): Promise<ProhibitedPattern[]> => {
-    return request(`/sessions/${sessionId}/patterns`)
-  },
-
   /** Add a new prohibition pattern (blocks matching songs from search) */
   createProhibitedPattern: async (
     sessionId: string,

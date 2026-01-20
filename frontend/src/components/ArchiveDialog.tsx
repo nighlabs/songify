@@ -33,10 +33,8 @@ export function ArchiveDialog({
   onUpdate,
 }: ArchiveDialogProps) {
   const [archiving, setArchiving] = useState(false)
-  const [error, setError] = useState('')
 
   const handleArchive = async () => {
-    setError('')
     setArchiving(true)
     try {
       await api.archiveAllRequests(sessionId)
@@ -44,7 +42,6 @@ export function ArchiveDialog({
       onOpenChange(false)
       toast.success('All requests archived')
     } catch {
-      setError('Failed to archive requests')
       toast.error('Failed to archive requests')
     } finally {
       setArchiving(false)
@@ -68,7 +65,6 @@ export function ArchiveDialog({
           <p className="text-sm text-muted-foreground">
             Use this to clear the queue when reusing a session for a new collaboration.
           </p>
-          {error && <p className="text-sm text-destructive mt-2">{error}</p>}
         </div>
 
         <DialogFooter>

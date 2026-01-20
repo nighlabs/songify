@@ -15,7 +15,7 @@
  * - Mutations for submit/approve/reject with optimistic updates
  */
 
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -49,19 +49,14 @@ import {
   getPlaylist,
   tryRestoreSpotifySession,
 } from '@/services/spotify'
+import { useClickOutside } from '@/hooks/useClickOutside'
+import { formatDuration } from '@/lib/utils'
 
 /** Cached playlist info for display in SpotifyStatus */
 type PlaylistInfo = {
   name: string
   imageUrl: string | null
   externalUrl: string
-}
-
-/** Format milliseconds as M:SS */
-function formatDuration(ms: number): string {
-  const minutes = Math.floor(ms / 60000)
-  const seconds = Math.floor((ms % 60000) / 1000)
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`
 }
 
 /** Visual badge showing request status (pending/approved/rejected) */
@@ -163,16 +158,7 @@ function SpotifyStatus({
     }
   }, [playlistId, isAuthenticated])
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setDropdownOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+  useClickOutside(dropdownRef, useCallback(() => setDropdownOpen(false), []))
 
   const isConnected = isAuthenticated
 
@@ -303,7 +289,6 @@ export function SessionPage() {
   const [isSearching, setIsSearching] = useState(false)
   const [copiedKey, setCopiedKey] = useState(false)
   const [approveError, setApproveError] = useState<string | null>(null)
-  const [, setSpotifyRestored] = useState(false) // Trigger re-render after Spotify restore
 
   // ----- Auth Guard -----
   // Redirect to home if not authenticated or accessing wrong session
@@ -328,11 +313,12 @@ export function SessionPage() {
     if (isAdmin && session?.spotifyPlaylistId) {
       tryRestoreSpotifySession(session.spotifyPlaylistId).then((restored) => {
         if (restored) {
-          setSpotifyRestored(true) // Trigger re-render to update SpotifyStatus
+          // Invalidate session query to trigger re-render with updated Spotify auth state
+          queryClient.invalidateQueries({ queryKey: ['session', id] })
         }
       })
     }
-  }, [isAdmin, session?.spotifyPlaylistId])
+  }, [isAdmin, session?.spotifyPlaylistId, queryClient, id])
 
   // Song requests with 5-second polling for real-time updates
   const { data: requests = [], isLoading: requestsLoading } = useQuery<SongRequest[]>({
@@ -340,6 +326,7 @@ export function SessionPage() {
     queryFn: () => api.getSongRequests(id!),
     enabled: !!id,
     refetchInterval: 5000,
+    refetchIntervalInBackground: false, // Don't poll when tab is not visible
   })
 
   // ----- Mutations -----
@@ -461,9 +448,7 @@ export function SessionPage() {
 
       // Check duration limit
       if (session.songDurationLimitMs && track.durationMs > session.songDurationLimitMs) {
-        const limitMins = Math.floor(session.songDurationLimitMs / 60000)
-        const limitSecs = Math.floor((session.songDurationLimitMs % 60000) / 1000)
-        return `Song exceeds ${limitMins}:${limitSecs.toString().padStart(2, '0')} time limit`
+        return `Song exceeds ${formatDuration(session.songDurationLimitMs)} time limit`
       }
 
       // Check prohibited patterns (case-insensitive substring match)
