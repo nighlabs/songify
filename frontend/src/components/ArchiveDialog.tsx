@@ -1,3 +1,10 @@
+/**
+ * Confirmation dialog for archiving (deleting) all song requests.
+ *
+ * Use case: Clearing the queue when reusing a session for a new event.
+ * This is a destructive action that cannot be undone.
+ */
+
 import { useState } from 'react'
 import { Loader2, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
@@ -16,7 +23,7 @@ interface ArchiveDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   sessionId: string
-  onUpdate: () => void
+  onUpdate: () => void  // Called after successful archive
 }
 
 export function ArchiveDialog({

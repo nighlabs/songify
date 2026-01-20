@@ -1,3 +1,17 @@
+/**
+ * Create session page - Admin creates a new playlist session.
+ *
+ * Collects:
+ * - Session name (display name shown to friends)
+ * - Admin name (e.g., "DJ Chris")
+ * - Password (used to rejoin as admin later)
+ *
+ * On success:
+ * - Generates a BIP39-style friend access key
+ * - Returns JWT token for admin
+ * - Redirects to session page
+ */
+
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, ArrowLeft } from 'lucide-react'

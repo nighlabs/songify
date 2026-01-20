@@ -1,3 +1,10 @@
+/**
+ * Dialog for setting the maximum song duration.
+ *
+ * Songs exceeding this limit are blocked from search results.
+ * Useful for parties where you want to keep songs under a certain length.
+ */
+
 import { useState, useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -18,8 +25,8 @@ interface TimeLimitDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   sessionId: string
-  currentLimitMs?: number
-  onUpdate: () => void
+  currentLimitMs?: number        // Current limit in milliseconds
+  onUpdate: () => void           // Called after saving changes
 }
 
 export function TimeLimitDialog({

@@ -1,3 +1,14 @@
+/**
+ * Dialog for managing prohibition patterns.
+ *
+ * Patterns are case-insensitive substrings that block matching songs.
+ * Two pattern types:
+ * - Artist: Blocks songs by artists matching the pattern
+ * - Title: Blocks songs with titles matching the pattern
+ *
+ * Example: Adding artist pattern "bieber" blocks all Justin Bieber songs.
+ */
+
 import { useState } from 'react'
 import { Loader2, X, Plus } from 'lucide-react'
 import { toast } from 'sonner'
@@ -18,8 +29,8 @@ interface PatternsDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   sessionId: string
-  patterns: ProhibitedPattern[]
-  onUpdate: () => void
+  patterns: ProhibitedPattern[]  // Current patterns from session
+  onUpdate: () => void           // Called after adding/removing patterns
 }
 
 export function PatternsDialog({
