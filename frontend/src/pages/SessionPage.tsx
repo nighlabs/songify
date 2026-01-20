@@ -579,19 +579,26 @@ export function SessionPage() {
                           : 'bg-muted/50 hover:bg-muted'
                       }`}
                     >
-                      {track.albumArtUrl && (
-                        <img
-                          src={track.albumArtUrl}
-                          alt={track.albumName}
-                          className="w-12 h-12 rounded"
-                        />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{track.name}</p>
-                        <p className="text-sm text-muted-foreground truncate">
-                          {track.artists.join(', ')} • {track.albumName}
-                        </p>
-                      </div>
+                      <a
+                        href={`https://open.spotify.com/track/${track.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity"
+                      >
+                        {track.albumArtUrl && (
+                          <img
+                            src={track.albumArtUrl}
+                            alt={track.albumName}
+                            className="w-12 h-12 rounded"
+                          />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{track.name}</p>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {track.artists.join(', ')} • {track.albumName}
+                          </p>
+                        </div>
+                      </a>
                       <span className="text-sm text-muted-foreground">
                         {formatDuration(track.durationMs)}
                       </span>
@@ -659,19 +666,26 @@ export function SessionPage() {
                     key={request.id}
                     className="flex items-center gap-3 p-3 rounded-lg bg-yellow-50 border border-yellow-200"
                   >
-                    {request.albumArtUrl && (
-                      <img
-                        src={request.albumArtUrl}
-                        alt={request.albumName}
-                        className="w-12 h-12 rounded"
-                      />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{request.trackName}</p>
-                      <p className="text-sm text-muted-foreground truncate">
-                        {request.artistNames} • {request.albumName}
-                      </p>
-                    </div>
+                    <a
+                      href={`https://open.spotify.com/track/${request.spotifyTrackId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity"
+                    >
+                      {request.albumArtUrl && (
+                        <img
+                          src={request.albumArtUrl}
+                          alt={request.albumName}
+                          className="w-12 h-12 rounded"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{request.trackName}</p>
+                        <p className="text-sm text-muted-foreground truncate">
+                          {request.artistNames} • {request.albumName}
+                        </p>
+                      </div>
+                    </a>
                     <span className="text-sm text-muted-foreground">
                       {formatDuration(request.durationMs)}
                     </span>
@@ -722,24 +736,31 @@ export function SessionPage() {
                         : 'bg-red-50 border border-red-200'
                     }`}
                   >
-                    {request.albumArtUrl && (
-                      <img
-                        src={request.albumArtUrl}
-                        alt={request.albumName}
-                        className="w-12 h-12 rounded"
-                      />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{request.trackName}</p>
-                      <p className="text-sm text-muted-foreground truncate">
-                        {request.artistNames}
-                      </p>
-                      {request.rejectionReason && (
-                        <p className="text-xs text-red-600 mt-1">
-                          Reason: {request.rejectionReason}
-                        </p>
+                    <a
+                      href={`https://open.spotify.com/track/${request.spotifyTrackId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity"
+                    >
+                      {request.albumArtUrl && (
+                        <img
+                          src={request.albumArtUrl}
+                          alt={request.albumName}
+                          className="w-12 h-12 rounded"
+                        />
                       )}
-                    </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{request.trackName}</p>
+                        <p className="text-sm text-muted-foreground truncate">
+                          {request.artistNames}
+                        </p>
+                        {request.rejectionReason && (
+                          <p className="text-xs text-red-600 mt-1">
+                            Reason: {request.rejectionReason}
+                          </p>
+                        )}
+                      </div>
+                    </a>
                     <span className="text-sm text-muted-foreground">
                       {formatDuration(request.durationMs)}
                     </span>
