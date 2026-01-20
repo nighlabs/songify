@@ -42,10 +42,19 @@ export function hasStoredSpotifyToken(): boolean {
 }
 
 // Try to restore Spotify session from stored token
-// Returns true if session was restored successfully
+// Returns true if session was restored and verified successfully
 export async function tryRestoreSpotifySession(): Promise<boolean> {
   if (spotifyApi) {
-    return true // Already initialized
+    // Already initialized, but verify token still works
+    try {
+      await spotifyApi.currentUser.profile()
+      return true
+    } catch {
+      // Token expired or invalid, clear it
+      localStorage.removeItem('spotify-sdk:AuthorizationCodeWithPKCEStrategy:token')
+      spotifyApi = null
+      return false
+    }
   }
 
   if (!hasStoredSpotifyToken()) {
@@ -56,6 +65,9 @@ export async function tryRestoreSpotifySession(): Promise<boolean> {
     const api = await initSpotifyAuth()
     // The SDK's authenticate() will use the stored token if valid
     await api.authenticate()
+
+    // Verify the token actually works by making an API call
+    await api.currentUser.profile()
     return true
   } catch (e) {
     console.error('Failed to restore Spotify session:', e)
