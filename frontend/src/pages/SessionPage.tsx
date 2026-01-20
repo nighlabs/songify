@@ -30,6 +30,7 @@ import {
   isSpotifyAuthenticated,
   addTrackToPlaylist,
   getPlaylist,
+  tryRestoreSpotifySession,
 } from '@/services/spotify'
 
 type PlaylistInfo = {
@@ -271,6 +272,7 @@ export function SessionPage() {
   const [isSearching, setIsSearching] = useState(false)
   const [copiedKey, setCopiedKey] = useState(false)
   const [approveError, setApproveError] = useState<string | null>(null)
+  const [, setSpotifyRestored] = useState(false) // Used to trigger re-render after restore
 
   // Redirect if not authenticated or wrong session
   useEffect(() => {
@@ -278,6 +280,17 @@ export function SessionPage() {
       navigate('/')
     }
   }, [sessionId, id, navigate])
+
+  // Try to restore Spotify session from stored token on mount (admin only)
+  useEffect(() => {
+    if (isAdmin) {
+      tryRestoreSpotifySession().then((restored) => {
+        if (restored) {
+          setSpotifyRestored(true) // Trigger re-render to update SpotifyStatus
+        }
+      })
+    }
+  }, [isAdmin])
 
   // Fetch session details
   const { data: session, isLoading: sessionLoading } = useQuery<Session>({
