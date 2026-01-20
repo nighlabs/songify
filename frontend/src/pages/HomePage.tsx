@@ -1,3 +1,10 @@
+/**
+ * Home page - Entry point for friends joining a session.
+ *
+ * Users enter the BIP39-style access key (e.g., "happy tiger 42")
+ * shared by the session admin. The key is hashed before transmission.
+ */
+
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Music, Users } from 'lucide-react'

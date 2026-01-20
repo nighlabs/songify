@@ -1,3 +1,8 @@
+/**
+ * API client for the Songify backend.
+ * All requests are automatically authenticated using the JWT from the auth store.
+ */
+
 import type {
   Session,
   SongRequest,
@@ -12,6 +17,10 @@ import { useAuthStore } from '@/stores/authStore'
 
 const API_BASE = '/api'
 
+/**
+ * Custom error class for API errors.
+ * Includes HTTP status code for error handling.
+ */
 class ApiError extends Error {
   status: number
 
@@ -22,6 +31,10 @@ class ApiError extends Error {
   }
 }
 
+/**
+ * Generic request helper that handles auth headers and error responses.
+ * Automatically attaches JWT token from auth store if available.
+ */
 async function request<T>(
   endpoint: string,
   options: RequestInit = {}
@@ -50,8 +63,14 @@ async function request<T>(
   return response.json()
 }
 
+/**
+ * API client object containing all backend endpoints.
+ * Methods are grouped by feature area.
+ */
 export const api = {
-  // Admin portal
+  // ----- Admin Portal -----
+
+  /** Verify the global admin portal password (uses time-based hash) */
   verifyAdminPassword: async (passwordHash: string): Promise<{ valid: boolean }> => {
     return request('/admin/verify', {
       method: 'POST',
@@ -59,7 +78,9 @@ export const api = {
     })
   },
 
-  // Sessions
+  // ----- Sessions -----
+
+  /** Create a new session (returns JWT and friend access key) */
   createSession: async (data: CreateSessionRequest): Promise<CreateSessionResponse> => {
     return request('/sessions', {
       method: 'POST',
@@ -67,6 +88,7 @@ export const api = {
     })
   },
 
+  /** Join a session as a friend using the hashed access key */
   joinSession: async (friendKeyHash: string): Promise<JoinSessionResponse> => {
     return request('/sessions/join', {
       method: 'POST',
@@ -74,6 +96,7 @@ export const api = {
     })
   },
 
+  /** Rejoin a session as admin using access key + password */
   rejoinSession: async (friendKeyHash: string, adminPasswordHash: string): Promise<RejoinSessionResponse> => {
     return request('/sessions/rejoin', {
       method: 'POST',
@@ -81,15 +104,19 @@ export const api = {
     })
   },
 
+  /** Get session details (requires auth) */
   getSession: async (sessionId: string): Promise<Session> => {
     return request(`/sessions/${sessionId}`)
   },
 
-  // Song requests
+  // ----- Song Requests -----
+
+  /** Get all song requests for a session */
   getSongRequests: async (sessionId: string): Promise<SongRequest[]> => {
     return request(`/sessions/${sessionId}/requests`)
   },
 
+  /** Submit a new song request from search results */
   submitSongRequest: async (
     sessionId: string,
     track: SpotifyTrack
@@ -108,12 +135,14 @@ export const api = {
     })
   },
 
+  /** Approve a pending song request (admin only) */
   approveSongRequest: async (sessionId: string, requestId: number): Promise<SongRequest> => {
     return request(`/sessions/${sessionId}/requests/${requestId}/approve`, {
       method: 'PUT',
     })
   },
 
+  /** Reject a pending song request with optional reason (admin only) */
   rejectSongRequest: async (
     sessionId: string,
     requestId: number,
@@ -125,17 +154,21 @@ export const api = {
     })
   },
 
+  /** Delete all song requests in a session (admin only) */
   archiveAllRequests: async (sessionId: string): Promise<void> => {
     return request(`/sessions/${sessionId}/requests`, {
       method: 'DELETE',
     })
   },
 
-  // Spotify
+  // ----- Spotify Integration -----
+
+  /** Search Spotify for tracks (proxied through backend) */
   searchSpotify: async (query: string): Promise<{ tracks: SpotifyTrack[] }> => {
     return request(`/spotify/search?q=${encodeURIComponent(query)}`)
   },
 
+  /** Link a Spotify playlist to the session */
   updateSessionPlaylist: async (sessionId: string, spotifyPlaylistId: string, spotifyPlaylistName: string): Promise<void> => {
     return request(`/sessions/${sessionId}/playlist`, {
       method: 'PUT',
@@ -143,7 +176,9 @@ export const api = {
     })
   },
 
-  // Settings
+  // ----- Session Settings -----
+
+  /** Update the song duration limit (null to remove) */
   updateDurationLimit: async (sessionId: string, limitMs: number | null): Promise<void> => {
     return request(`/sessions/${sessionId}/settings/duration-limit`, {
       method: 'PUT',
@@ -151,11 +186,14 @@ export const api = {
     })
   },
 
-  // Prohibited patterns
+  // ----- Prohibited Patterns -----
+
+  /** Get all prohibition patterns for a session */
   getProhibitedPatterns: async (sessionId: string): Promise<ProhibitedPattern[]> => {
     return request(`/sessions/${sessionId}/patterns`)
   },
 
+  /** Add a new prohibition pattern (blocks matching songs from search) */
   createProhibitedPattern: async (
     sessionId: string,
     patternType: 'artist' | 'title',
@@ -167,6 +205,7 @@ export const api = {
     })
   },
 
+  /** Remove a prohibition pattern */
   deleteProhibitedPattern: async (sessionId: string, patternId: number): Promise<void> => {
     return request(`/sessions/${sessionId}/patterns/${patternId}`, {
       method: 'DELETE',

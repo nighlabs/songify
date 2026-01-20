@@ -1,3 +1,14 @@
+/**
+ * Admin portal entry page.
+ *
+ * Requires the global admin password (set via ADMIN_PASSWORD env var).
+ * This gates access to session creation - only authorized users can
+ * create new sessions.
+ *
+ * The password is hashed with the current UTC day as salt before
+ * being sent to the backend for verification.
+ */
+
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Shield, ArrowLeft } from 'lucide-react'

@@ -1,3 +1,14 @@
+/**
+ * Admin settings dropdown menu.
+ *
+ * Provides access to session configuration:
+ * - Song time limit (maximum duration)
+ * - Prohibition patterns (block artists/titles)
+ * - Archive all requests (clear queue)
+ *
+ * Each setting opens a dialog for detailed configuration.
+ */
+
 import { useState, useRef, useEffect } from 'react'
 import { Settings, Clock, Ban, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -8,7 +19,7 @@ import type { Session } from '@/types'
 
 interface AdminSettingsProps {
   session: Session
-  onSessionUpdate: () => void
+  onSessionUpdate: () => void  // Called after any setting change
 }
 
 export function AdminSettings({ session, onSessionUpdate }: AdminSettingsProps) {

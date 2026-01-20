@@ -1,3 +1,20 @@
+/**
+ * Main session page - The core UI for both admins and friends.
+ *
+ * Features:
+ * - Song search via Spotify API
+ * - Submit song requests
+ * - View pending/processed requests
+ * - (Admin) Approve/reject requests
+ * - (Admin) Spotify playlist integration
+ * - (Admin) Session settings (time limit, prohibited patterns)
+ *
+ * Data fetching:
+ * - Session details: useQuery with cache invalidation
+ * - Song requests: useQuery with 5s polling for real-time updates
+ * - Mutations for submit/approve/reject with optimistic updates
+ */
+
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -33,18 +50,21 @@ import {
   tryRestoreSpotifySession,
 } from '@/services/spotify'
 
+/** Cached playlist info for display in SpotifyStatus */
 type PlaylistInfo = {
   name: string
   imageUrl: string | null
   externalUrl: string
 }
 
+/** Format milliseconds as M:SS */
 function formatDuration(ms: number): string {
   const minutes = Math.floor(ms / 60000)
   const seconds = Math.floor((ms % 60000) / 1000)
   return `${minutes}:${seconds.toString().padStart(2, '0')}`
 }
 
+/** Visual badge showing request status (pending/approved/rejected) */
 function StatusBadge({ status }: { status: string }) {
   switch (status) {
     case 'pending':
@@ -73,6 +93,14 @@ function StatusBadge({ status }: { status: string }) {
   }
 }
 
+/**
+ * Spotify connection status indicator in the header.
+ *
+ * States:
+ * - No playlist linked: Green "Connect Spotify" button
+ * - Playlist linked, not authenticated: Amber "Reconnect" warning
+ * - Playlist linked and authenticated: Green playlist name with dropdown
+ */
 function SpotifyStatus({
   playlistId,
   playlistName,
@@ -269,29 +297,33 @@ export function SessionPage() {
   const queryClient = useQueryClient()
   const { isAdmin, friendAccessKey, logout, sessionId } = useAuthStore()
 
+  // ----- Local State -----
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<SpotifyTrack[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const [copiedKey, setCopiedKey] = useState(false)
   const [approveError, setApproveError] = useState<string | null>(null)
-  const [, setSpotifyRestored] = useState(false) // Used to trigger re-render after restore
+  const [, setSpotifyRestored] = useState(false) // Trigger re-render after Spotify restore
 
-  // Redirect if not authenticated or wrong session
+  // ----- Auth Guard -----
+  // Redirect to home if not authenticated or accessing wrong session
   useEffect(() => {
     if (!sessionId || sessionId !== id) {
       navigate('/')
     }
   }, [sessionId, id, navigate])
 
-  // Fetch session details
+  // ----- Data Fetching -----
+
+  // Session details (cached, invalidated on settings changes)
   const { data: session, isLoading: sessionLoading } = useQuery<Session>({
     queryKey: ['session', id],
     queryFn: () => api.getSession(id!),
     enabled: !!id,
   })
 
-  // Try to restore Spotify session from stored token (admin only)
-  // Runs after session loads so we can verify the linked playlist
+  // Restore Spotify session from localStorage token on page load
+  // Verifies the token is still valid by fetching the linked playlist
   useEffect(() => {
     if (isAdmin && session?.spotifyPlaylistId) {
       tryRestoreSpotifySession(session.spotifyPlaylistId).then((restored) => {
@@ -302,7 +334,7 @@ export function SessionPage() {
     }
   }, [isAdmin, session?.spotifyPlaylistId])
 
-  // Fetch song requests with polling
+  // Song requests with 5-second polling for real-time updates
   const { data: requests = [], isLoading: requestsLoading } = useQuery<SongRequest[]>({
     queryKey: ['requests', id],
     queryFn: () => api.getSongRequests(id!),
@@ -310,7 +342,9 @@ export function SessionPage() {
     refetchInterval: 5000,
   })
 
-  // Submit request mutation
+  // ----- Mutations -----
+
+  // Submit a new song request (available to all users)
   const submitMutation = useMutation({
     mutationFn: (track: SpotifyTrack) => api.submitSongRequest(id!, track),
     onSuccess: () => {
@@ -324,24 +358,23 @@ export function SessionPage() {
     },
   })
 
-  // Approve mutation
+  // Approve a request (admin only)
+  // Order: Check Spotify auth -> Add to playlist -> Mark approved in backend
   const approveMutation = useMutation({
     mutationFn: async (requestId: number) => {
-      // Check Spotify connection BEFORE approving
-      // If a playlist is linked but Spotify isn't authenticated, block the approval
+      // Block approval if playlist is linked but Spotify isn't connected
       if (session?.spotifyPlaylistId && !isSpotifyAuthenticated()) {
         throw new Error('Spotify connection required. Please reconnect to Spotify to approve songs.')
       }
 
       const request = requests.find((r) => r.id === requestId)
 
-      // If we have a playlist linked and Spotify is authenticated, add to playlist first
-      // This ensures we don't mark as approved if the Spotify call fails
+      // Add to Spotify playlist first - ensures we don't mark approved if Spotify fails
       if (session?.spotifyPlaylistId && isSpotifyAuthenticated() && request) {
         await addTrackToPlaylist(session.spotifyPlaylistId, request.spotifyUri)
       }
 
-      // Only mark as approved after successful Spotify add (or if no playlist linked)
+      // Only mark as approved after successful Spotify add
       return api.approveSongRequest(id!, requestId)
     },
     onSuccess: () => {
@@ -350,8 +383,7 @@ export function SessionPage() {
       toast.success('Song approved')
     },
     onError: (error: Error) => {
-      // Show inline error for Spotify connection issues (actionable)
-      // Show toast for other errors
+      // Spotify connection errors show inline (actionable), others show toast
       if (error.message.includes('Spotify connection required')) {
         setApproveError(error.message)
       } else {
@@ -360,7 +392,7 @@ export function SessionPage() {
     },
   })
 
-  // Reject mutation
+  // Reject a request (admin only)
   const rejectMutation = useMutation({
     mutationFn: (requestId: number) => api.rejectSongRequest(id!, requestId),
     onSuccess: () => {
@@ -372,7 +404,9 @@ export function SessionPage() {
     },
   })
 
-  // Search handler
+  // ----- Event Handlers -----
+
+  // Search Spotify for tracks
   const handleSearch = async () => {
     if (!searchQuery.trim()) return
 
@@ -388,7 +422,7 @@ export function SessionPage() {
     }
   }
 
-  // Copy access key
+  // Copy friend access key to clipboard (admin only)
   const handleCopyKey = () => {
     if (friendAccessKey) {
       navigator.clipboard.writeText(friendAccessKey)
@@ -397,17 +431,16 @@ export function SessionPage() {
     }
   }
 
-  // Handle logout
+  // Clear auth state and return to home
   const handleLogout = () => {
     logout()
     navigate('/')
   }
 
-  // Spotify auth for admin - triggers OAuth flow which redirects to /callback
+  // Start Spotify OAuth flow -> redirects to Spotify -> comes back to /callback
   const handleSpotifyAuth = async () => {
     try {
       await authenticateSpotify()
-      // After authentication, navigate to callback to select playlist
       navigate('/callback')
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Spotify authentication failed'
@@ -415,8 +448,13 @@ export function SessionPage() {
     }
   }
 
-  // Check if tracks are blocked based on session settings
-  // Must be called before early returns to maintain consistent hook order
+  // ----- Computed Values -----
+
+  /**
+   * Check if a track should be blocked based on session settings.
+   * Returns a human-readable reason if blocked, null otherwise.
+   * Memoized to avoid recalculating on every render.
+   */
   const getBlockReason = useMemo(() => {
     return (track: SpotifyTrack): string | null => {
       if (!session) return null
@@ -427,6 +465,7 @@ export function SessionPage() {
         const limitSecs = Math.floor((session.songDurationLimitMs % 60000) / 1000)
         return `Song exceeds ${limitMins}:${limitSecs.toString().padStart(2, '0')} time limit`
       }
+
       // Check prohibited patterns (case-insensitive substring match)
       for (const p of session.prohibitedPatterns || []) {
         if (p.patternType === 'artist' &&
@@ -438,6 +477,7 @@ export function SessionPage() {
           return `Title matches prohibited pattern "${p.pattern}"`
         }
       }
+
       return null
     }
   }, [session])

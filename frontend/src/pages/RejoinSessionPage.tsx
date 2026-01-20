@@ -1,3 +1,15 @@
+/**
+ * Rejoin session page - Admin signs back into an existing session.
+ *
+ * Requires:
+ * - Friend access key (the BIP39 mnemonic shared with friends)
+ * - Admin name (must match what was used during creation)
+ * - Password (the password set during session creation)
+ *
+ * This allows admins to return to their session from a new device
+ * or after clearing browser data.
+ */
+
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { LogIn, ArrowLeft } from 'lucide-react'

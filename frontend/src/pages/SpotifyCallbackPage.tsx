@@ -1,3 +1,18 @@
+/**
+ * Spotify OAuth callback page.
+ *
+ * This page handles two scenarios:
+ * 1. OAuth callback: Spotify redirects here with an auth code after user authorization
+ * 2. Direct navigation: Admin clicks "Connect Spotify" when already authenticated
+ *
+ * Flow:
+ * 1. Exchange auth code for access token (handled by SDK)
+ * 2. Fetch user's playlists
+ * 3. User selects existing playlist or creates new one
+ * 4. Link selected playlist to the session
+ * 5. Redirect back to session page
+ */
+
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
@@ -15,6 +30,7 @@ type SpotifyPlaylist = {
   images: { url: string }[]
 }
 
+/** Page state machine */
 type State = 'authenticating' | 'selecting' | 'saving' | 'error'
 
 export function SpotifyCallbackPage() {
