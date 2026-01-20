@@ -290,6 +290,14 @@ export function SessionPage() {
   const [copiedKey, setCopiedKey] = useState(false)
   const [approveError, setApproveError] = useState<string | null>(null)
 
+  // Search filter state
+  const [artistFilter, setArtistFilter] = useState('')
+  const [albumFilter, setAlbumFilter] = useState('')
+  const [trackFilter, setTrackFilter] = useState('')
+  const [showArtist, setShowArtist] = useState(false)
+  const [showAlbum, setShowAlbum] = useState(false)
+  const [showTrack, setShowTrack] = useState(false)
+
   // ----- Auth Guard -----
   // Redirect to home if not authenticated or accessing wrong session
   useEffect(() => {
@@ -395,11 +403,16 @@ export function SessionPage() {
 
   // Search Spotify for tracks
   const handleSearch = async () => {
-    if (!searchQuery.trim()) return
+    let query = searchQuery.trim()
+    if (artistFilter.trim()) query += ` artist:${artistFilter.trim()}`
+    if (albumFilter.trim()) query += ` album:${albumFilter.trim()}`
+    if (trackFilter.trim()) query += ` track:${trackFilter.trim()}`
+
+    if (!query) return
 
     setIsSearching(true)
     try {
-      const response = await api.searchSpotify(searchQuery)
+      const response = await api.searchSpotify(query)
       setSearchResults(response.tracks)
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Search failed'
@@ -536,6 +549,69 @@ export function SessionPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
+            {/* Filter toggle buttons */}
+            <div className="flex gap-2 mb-2">
+              <Button
+                variant={showArtist ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  if (showArtist) setArtistFilter('')
+                  setShowArtist(!showArtist)
+                }}
+              >
+                Artist
+              </Button>
+              <Button
+                variant={showAlbum ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  if (showAlbum) setAlbumFilter('')
+                  setShowAlbum(!showAlbum)
+                }}
+              >
+                Album
+              </Button>
+              <Button
+                variant={showTrack ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  if (showTrack) setTrackFilter('')
+                  setShowTrack(!showTrack)
+                }}
+              >
+                Track
+              </Button>
+            </div>
+
+            {/* Filter input fields */}
+            {showArtist && (
+              <Input
+                placeholder="Artist name..."
+                value={artistFilter}
+                onChange={(e) => setArtistFilter(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                className="mb-2"
+              />
+            )}
+            {showAlbum && (
+              <Input
+                placeholder="Album name..."
+                value={albumFilter}
+                onChange={(e) => setAlbumFilter(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                className="mb-2"
+              />
+            )}
+            {showTrack && (
+              <Input
+                placeholder="Track name..."
+                value={trackFilter}
+                onChange={(e) => setTrackFilter(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                className="mb-2"
+              />
+            )}
+
             <div className="flex gap-2">
               <div className="relative flex-1">
                 <Input
@@ -543,14 +619,20 @@ export function SessionPage() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                  className={searchQuery || searchResults.length > 0 ? 'pr-8' : ''}
+                  className={searchQuery || searchResults.length > 0 || artistFilter || albumFilter || trackFilter ? 'pr-8' : ''}
                 />
-                {(searchQuery || searchResults.length > 0) && (
+                {(searchQuery || searchResults.length > 0 || artistFilter || albumFilter || trackFilter) && (
                   <button
                     type="button"
                     onClick={() => {
                       setSearchQuery('')
                       setSearchResults([])
+                      setArtistFilter('')
+                      setAlbumFilter('')
+                      setTrackFilter('')
+                      setShowArtist(false)
+                      setShowAlbum(false)
+                      setShowTrack(false)
                     }}
                     className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
