@@ -36,6 +36,59 @@ export function isSpotifyAuthenticated(): boolean {
   return spotifyApi !== null
 }
 
+// Check if there's a stored Spotify token in localStorage
+export function hasStoredSpotifyToken(): boolean {
+  return localStorage.getItem('spotify-sdk:AuthorizationCodeWithPKCEStrategy:token') !== null
+}
+
+// Try to restore Spotify session from stored token
+// If playlistId is provided, verifies access to that specific playlist
+// Returns true if session was restored and verified successfully
+export async function tryRestoreSpotifySession(playlistId?: string): Promise<boolean> {
+  if (spotifyApi) {
+    // Already initialized, but verify token still works
+    try {
+      if (playlistId) {
+        // Verify we can access the linked playlist
+        await spotifyApi.playlists.getPlaylist(playlistId)
+      } else {
+        // Fallback: verify with any playlist read
+        await spotifyApi.currentUser.playlists.playlists(1)
+      }
+      return true
+    } catch {
+      // Token expired, invalid, or playlist no longer accessible
+      localStorage.removeItem('spotify-sdk:AuthorizationCodeWithPKCEStrategy:token')
+      spotifyApi = null
+      return false
+    }
+  }
+
+  if (!hasStoredSpotifyToken()) {
+    return false // No stored token
+  }
+
+  try {
+    const api = await initSpotifyAuth()
+    // The SDK's authenticate() will use the stored token if valid
+    await api.authenticate()
+
+    // Verify the token works by accessing the playlist
+    if (playlistId) {
+      await api.playlists.getPlaylist(playlistId)
+    } else {
+      await api.currentUser.playlists.playlists(1)
+    }
+    return true
+  } catch (e) {
+    console.error('Failed to restore Spotify session:', e)
+    // Clear invalid token
+    localStorage.removeItem('spotify-sdk:AuthorizationCodeWithPKCEStrategy:token')
+    spotifyApi = null
+    return false
+  }
+}
+
 export async function getUserPlaylists() {
   if (!spotifyApi) {
     throw new Error('Spotify not authenticated')
