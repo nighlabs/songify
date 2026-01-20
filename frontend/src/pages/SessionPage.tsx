@@ -475,12 +475,6 @@ export function SessionPage() {
                   onChangePlaylist={handleSpotifyAuth}
                 />
               )}
-              {isAdmin && session && (
-                <AdminSettings
-                  session={session}
-                  onSessionUpdate={() => queryClient.invalidateQueries({ queryKey: ['session', id] })}
-                />
-              )}
               {isAdmin && friendAccessKey && (
                 <Button
                   variant="outline"
@@ -492,6 +486,12 @@ export function SessionPage() {
                   <span className="hidden sm:inline">{copiedKey ? 'Copied!' : friendAccessKey}</span>
                   <span className="sm:hidden">{copiedKey ? 'Copied!' : 'Share'}</span>
                 </Button>
+              )}
+              {isAdmin && session && (
+                <AdminSettings
+                  session={session}
+                  onSessionUpdate={() => queryClient.invalidateQueries({ queryKey: ['session', id] })}
+                />
               )}
               <Button variant="ghost" size="icon" onClick={handleLogout}>
                 <LogOut className="h-4 w-4" />
