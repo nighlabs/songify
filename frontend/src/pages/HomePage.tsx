@@ -25,7 +25,10 @@ export function HomePage() {
 
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!friendKey.trim()) {
+    const sanitizedKey = friendKey.trim().toLowerCase()
+    setFriendKey(sanitizedKey)
+
+    if (!sanitizedKey) {
       setError('Please enter an access key')
       return
     }
@@ -34,7 +37,7 @@ export function HomePage() {
     setError('')
 
     try {
-      const friendKeyHash = await hashFriendKey(friendKey)
+      const friendKeyHash = await hashFriendKey(sanitizedKey)
       const response = await api.joinSession(friendKeyHash)
       setFriendAuth(response.token, response.sessionId, response.displayName)
       navigate(`/session/${response.sessionId}`)

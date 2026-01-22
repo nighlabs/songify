@@ -33,8 +33,10 @@ export function RejoinSessionPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    const sanitizedKey = friendAccessKey.trim().toLowerCase()
+    setFriendAccessKey(sanitizedKey)
 
-    if (!friendAccessKey || !adminName || !password) {
+    if (!sanitizedKey || !adminName || !password) {
       setError('Please fill in all fields')
       return
     }
@@ -43,7 +45,7 @@ export function RejoinSessionPage() {
     setError('')
 
     try {
-      const friendKeyHash = await hashFriendKey(friendAccessKey)
+      const friendKeyHash = await hashFriendKey(sanitizedKey)
       const passwordHash = await hashPassword(password, adminName)
       const response = await api.rejoinSession(friendKeyHash, passwordHash)
 
