@@ -21,6 +21,7 @@ const (
 type Claims struct {
 	SessionID string `json:"sid"`
 	Role      Role   `json:"role"`
+	Identity  string `json:"identity,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -42,7 +43,8 @@ func NewAuthService(secret string, adminDuration, friendDuration time.Duration) 
 
 // GenerateToken creates a signed JWT for the given session and role.
 // Admin tokens have a longer expiry than friend tokens.
-func (s *AuthService) GenerateToken(sessionID string, role Role) (string, error) {
+// Identity is an optional anonymous name for tracking friend requests.
+func (s *AuthService) GenerateToken(sessionID string, role Role, identity string) (string, error) {
 	var duration time.Duration
 	if role == RoleAdmin {
 		duration = s.adminTokenDuration
@@ -53,6 +55,7 @@ func (s *AuthService) GenerateToken(sessionID string, role Role) (string, error)
 	claims := Claims{
 		SessionID: sessionID,
 		Role:      role,
+		Identity:  identity,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "songify",
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(duration)),

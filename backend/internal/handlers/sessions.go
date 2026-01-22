@@ -97,7 +97,7 @@ func (h *SessionHandler) Create(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	token, err := h.authService.GenerateToken(session.ID, services.RoleAdmin)
+	token, err := h.authService.GenerateToken(session.ID, services.RoleAdmin, session.AdminName)
 	if err != nil {
 		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to generate token", err)
 		return
@@ -145,7 +145,8 @@ func (h *SessionHandler) Join(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := h.authService.GenerateToken(matchedSession.ID, services.RoleFriend)
+	identity := h.friendKeyService.GenerateName()
+	token, err := h.authService.GenerateToken(matchedSession.ID, services.RoleFriend, identity)
 	if err != nil {
 		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to generate token", err)
 		return
@@ -200,7 +201,7 @@ func (h *SessionHandler) Rejoin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := h.authService.GenerateToken(matchedSession.ID, services.RoleAdmin)
+	token, err := h.authService.GenerateToken(matchedSession.ID, services.RoleAdmin, matchedSession.AdminName)
 	if err != nil {
 		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to generate token", err)
 		return

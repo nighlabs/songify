@@ -42,4 +42,5 @@ type SongRequest struct {
 	RequestedAt     sql.NullTime   `json:"requested_at"`
 	ProcessedAt     sql.NullTime   `json:"processed_at"`
 	RejectionReason sql.NullString `json:"rejection_reason"`
+	RequesterName   sql.NullString `json:"requester_name"`
 }

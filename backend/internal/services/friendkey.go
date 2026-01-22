@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"strings"
 	"time"
 
 	"github.com/songify/backend/internal/db"
@@ -49,4 +50,21 @@ func (s *FriendKeyService) Generate(ctx context.Context) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("failed to generate unique key after %d attempts", maxAttempts)
+}
+
+// GenerateName creates a random identity name without uniqueness checking.
+// Returns a PascalCase name like "HappyTiger42".
+func (s *FriendKeyService) GenerateName() string {
+	word1 := wordlist[s.rng.Intn(len(wordlist))]
+	word2 := wordlist[s.rng.Intn(len(wordlist))]
+	num := s.rng.Intn(100)
+	return fmt.Sprintf("%s%s%d", capitalize(word1), capitalize(word2), num)
+}
+
+// capitalize returns the string with its first letter uppercased.
+func capitalize(s string) string {
+	if s == "" {
+		return s
+	}
+	return strings.ToUpper(s[:1]) + s[1:]
 }
