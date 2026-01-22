@@ -108,6 +108,11 @@ func (h *RequestHandler) Submit(w http.ResponseWriter, r *http.Request) {
 		albumArtURL = sql.NullString{String: req.AlbumArtURL, Valid: true}
 	}
 
+	var requesterName sql.NullString
+	if claims.Identity != "" {
+		requesterName = sql.NullString{String: claims.Identity, Valid: true}
+	}
+
 	songRequest, err := h.queries.CreateSongRequest(r.Context(), db.CreateSongRequestParams{
 		SessionID:      sessionID,
 		SpotifyTrackID: req.SpotifyTrackID,
@@ -117,6 +122,7 @@ func (h *RequestHandler) Submit(w http.ResponseWriter, r *http.Request) {
 		AlbumArtUrl:    albumArtURL,
 		DurationMs:     req.DurationMS,
 		SpotifyUri:     req.SpotifyURI,
+		RequesterName:  requesterName,
 	})
 	if err != nil {
 		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to create request", err)
@@ -269,6 +275,9 @@ func songRequestToResponse(req db.SongRequest) models.SongRequestResponse {
 	}
 	if req.RejectionReason.Valid {
 		resp.RejectionReason = &req.RejectionReason.String
+	}
+	if req.RequesterName.Valid {
+		resp.RequesterName = &req.RequesterName.String
 	}
 
 	return resp

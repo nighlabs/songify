@@ -106,6 +106,7 @@ type SongRequestResponse struct {
 	RequestedAt     time.Time  `json:"requestedAt"`
 	ProcessedAt     *time.Time `json:"processedAt,omitempty"`
 	RejectionReason *string    `json:"rejectionReason,omitempty"`
+	RequesterName   *string    `json:"requesterName,omitempty"`
 }
 
 // RejectSongRequestRequest optionally includes a reason for rejection.

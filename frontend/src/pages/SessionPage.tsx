@@ -768,6 +768,11 @@ export function SessionPage() {
                         <p className="text-sm text-muted-foreground truncate">
                           {request.artistNames} • {request.albumName}
                         </p>
+                        {isAdmin && request.requesterName && (
+                          <p className="text-xs text-muted-foreground/70 truncate">
+                            Requested by {request.requesterName}
+                          </p>
+                        )}
                       </div>
                     </a>
                     <span className="text-sm text-muted-foreground ml-auto flex-shrink-0">

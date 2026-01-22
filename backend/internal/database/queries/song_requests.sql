@@ -1,6 +1,6 @@
 -- name: CreateSongRequest :one
-INSERT INTO song_requests (session_id, spotify_track_id, track_name, artist_names, album_name, album_art_url, duration_ms, spotify_uri)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO song_requests (session_id, spotify_track_id, track_name, artist_names, album_name, album_art_url, duration_ms, spotify_uri, requester_name)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING *;
 
 -- name: GetSongRequestByID :one
