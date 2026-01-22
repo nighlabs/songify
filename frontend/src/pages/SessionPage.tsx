@@ -488,7 +488,9 @@ export function SessionPage() {
     )
   }
 
-  const pendingRequests = requests.filter((r) => r.status === 'pending')
+  const pendingRequests = requests
+    .filter((r) => r.status === 'pending')
+    .sort((a, b) => new Date(a.requestedAt).getTime() - new Date(b.requestedAt).getTime())
   const processedRequests = requests.filter((r) => r.status !== 'pending')
 
   return (
