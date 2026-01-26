@@ -8,9 +8,10 @@ require (
 	github.com/golang-migrate/migrate/v4 v4.19.1
 	github.com/google/uuid v1.6.0
 	github.com/mdobak/go-xerrors v1.0.0
+	github.com/tyler-smith/go-bip39 v1.1.0
 	golang.org/x/crypto v0.47.0
 	golang.org/x/time v0.14.0
-	modernc.org/sqlite v1.44.2
+	modernc.org/sqlite v1.44.3
 )
 
 require (
@@ -18,7 +19,6 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/ncruces/go-strftime v1.0.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
-	github.com/tyler-smith/go-bip39 v1.1.0 // indirect
 	golang.org/x/exp v0.0.0-20251023183803-a4bb9ffd2546 // indirect
 	golang.org/x/sys v0.40.0 // indirect
 	modernc.org/libc v1.67.6 // indirect
