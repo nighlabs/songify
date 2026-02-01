@@ -6,12 +6,15 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/songify/backend/internal/config"
 	"github.com/songify/backend/internal/database"
 	"github.com/songify/backend/internal/db"
 	"github.com/songify/backend/internal/logging"
 	"github.com/songify/backend/internal/router"
+	sentryscrub "github.com/songify/backend/internal/sentry"
 )
 
 func main() {
@@ -20,6 +23,23 @@ func main() {
 
 	// Load configuration
 	cfg := config.Load()
+
+	// Initialize Sentry (no-op when DSN is empty)
+	if cfg.SentryDSN != "" {
+		err := sentry.Init(sentry.ClientOptions{
+			Dsn:                    cfg.SentryDSN,
+			Environment:            cfg.SentryEnvironment,
+			TracesSampleRate:       0.2,
+			BeforeSend:             sentryscrub.ScrubEvent,
+			BeforeSendTransaction:  sentryscrub.ScrubTransaction,
+		})
+		if err != nil {
+			slog.Error("failed to initialize Sentry", slog.String("error", err.Error()))
+		} else {
+			slog.Info("Sentry initialized", slog.String("environment", cfg.SentryEnvironment))
+		}
+		defer sentry.Flush(2 * time.Second)
+	}
 
 	// Initialize database
 	sqlDB, err := database.New(cfg.DatabasePath)

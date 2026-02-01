@@ -3,6 +3,7 @@
  * All requests are automatically authenticated using the JWT from the auth store.
  */
 
+import * as Sentry from '@sentry/react'
 import type {
   Session,
   SongRequest,
@@ -57,7 +58,14 @@ async function request<T>(
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Unknown error' }))
-    throw new ApiError(response.status, error.error || error.message || 'Request failed')
+    const apiError = new ApiError(response.status, error.error || error.message || 'Request failed')
+
+    // Report 5xx server errors to Sentry (4xx are expected app flow)
+    if (response.status >= 500) {
+      Sentry.captureException(apiError)
+    }
+
+    throw apiError
   }
 
   return response.json()

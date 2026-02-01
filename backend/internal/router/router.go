@@ -5,6 +5,8 @@ package router
 import (
 	"net/http"
 
+	"github.com/getsentry/sentry-go"
+	sentryhttp "github.com/getsentry/sentry-go/http"
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/songify/backend/internal/config"
@@ -25,6 +27,10 @@ func New(cfg *config.Config, queries *db.Queries) http.Handler {
 
 	// Global middleware
 	r.Use(chimiddleware.Recoverer)
+	if sentry.CurrentHub().Client() != nil {
+		sentryHandler := sentryhttp.New(sentryhttp.Options{Repanic: true})
+		r.Use(sentryHandler.Handle)
+	}
 	realIPMiddleware := middleware.NewRealIPMiddleware(cfg.TrustedProxies)
 	r.Use(realIPMiddleware.Handler)
 	r.Use(middleware.RequestContextMiddleware)
