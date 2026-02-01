@@ -491,7 +491,9 @@ export function SessionPage() {
   const pendingRequests = requests
     .filter((r) => r.status === 'pending')
     .sort((a, b) => new Date(a.requestedAt).getTime() - new Date(b.requestedAt).getTime())
-  const processedRequests = requests.filter((r) => r.status !== 'pending')
+  const processedRequests = requests
+    .filter((r) => r.status !== 'pending')
+    .sort((a, b) => new Date(b.processedAt ?? b.requestedAt).getTime() - new Date(a.processedAt ?? a.requestedAt).getTime())
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-50 to-pink-50">
