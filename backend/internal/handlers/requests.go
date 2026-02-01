@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/songify/backend/internal/broker"
 	"github.com/songify/backend/internal/db"
 	"github.com/songify/backend/internal/middleware"
 	"github.com/songify/backend/internal/models"
@@ -17,11 +18,12 @@ import (
 // RequestHandler manages song request operations: listing, submitting, and moderation.
 type RequestHandler struct {
 	queries *db.Queries
+	broker  *broker.Broker
 }
 
-// NewRequestHandler creates a RequestHandler with the given database queries.
-func NewRequestHandler(queries *db.Queries) *RequestHandler {
-	return &RequestHandler{queries: queries}
+// NewRequestHandler creates a RequestHandler with the given database queries and event broker.
+func NewRequestHandler(queries *db.Queries, broker *broker.Broker) *RequestHandler {
+	return &RequestHandler{queries: queries, broker: broker}
 }
 
 // List returns all song requests for the session, ordered by request time.
@@ -130,6 +132,7 @@ func (h *RequestHandler) Submit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusCreated, songRequestToResponse(songRequest))
+	h.broker.Publish(sessionID)
 }
 
 // Approve marks a pending song request as approved (admin only).
@@ -174,6 +177,7 @@ func (h *RequestHandler) Approve(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, songRequestToResponse(updatedRequest))
+	h.broker.Publish(sessionID)
 }
 
 // Reject marks a pending song request as rejected with an optional reason (admin only).
@@ -232,6 +236,7 @@ func (h *RequestHandler) Reject(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, songRequestToResponse(updatedRequest))
+	h.broker.Publish(sessionID)
 }
 
 // ArchiveAll deletes all song requests for the session (admin only).
@@ -251,6 +256,7 @@ func (h *RequestHandler) ArchiveAll(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	h.broker.Publish(sessionID)
 }
 
 // songRequestToResponse converts a database song request to the API response format.

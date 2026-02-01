@@ -18,6 +18,18 @@ const (
 	ClaimsKey contextKey = "claims"
 )
 
+// QueryTokenAuthMiddleware extracts a "token" query parameter and sets it as
+// an Authorization: Bearer header. This is needed for EventSource connections
+// which cannot set custom headers. It must run before AuthMiddleware.
+func QueryTokenAuthMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if token := r.URL.Query().Get("token"); token != "" {
+			r.Header.Set("Authorization", "Bearer "+token)
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 // AuthMiddleware validates JWT tokens and adds claims to the request context.
 // Returns 401 for missing/invalid tokens.
 func AuthMiddleware(authService *services.AuthService) func(http.Handler) http.Handler {

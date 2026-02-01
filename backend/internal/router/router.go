@@ -9,6 +9,7 @@ import (
 	sentryhttp "github.com/getsentry/sentry-go/http"
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
+	"github.com/songify/backend/internal/broker"
 	"github.com/songify/backend/internal/config"
 	"github.com/songify/backend/internal/db"
 	"github.com/songify/backend/internal/handlers"
@@ -22,7 +23,7 @@ import (
 //   - Session routes: create, join, rejoin (unauthenticated)
 //   - Protected session routes: requires JWT auth
 //   - Admin-only routes: settings, patterns, request moderation
-func New(cfg *config.Config, queries *db.Queries) http.Handler {
+func New(cfg *config.Config, queries *db.Queries, eventBroker *broker.Broker) http.Handler {
 	r := chi.NewRouter()
 
 	// Global middleware
@@ -46,7 +47,8 @@ func New(cfg *config.Config, queries *db.Queries) http.Handler {
 	configHandler := handlers.NewConfigHandler(cfg)
 	sentryTunnelHandler := handlers.NewSentryTunnelHandler(cfg)
 	sessionHandler := handlers.NewSessionHandler(queries, authService, friendKeyService)
-	requestHandler := handlers.NewRequestHandler(queries)
+	requestHandler := handlers.NewRequestHandler(queries, eventBroker)
+	sseHandler := handlers.NewSSEHandler(eventBroker)
 	spotifyHandler := handlers.NewSpotifyHandler(spotifyService)
 
 	// Rate limiter for search
@@ -79,6 +81,13 @@ func New(cfg *config.Config, queries *db.Queries) http.Handler {
 
 			// Rejoin as admin (no auth)
 			r.Post("/rejoin", sessionHandler.Rejoin)
+
+			// SSE stream for real-time request updates (uses query param auth)
+			r.With(
+				middleware.QueryTokenAuthMiddleware,
+				middleware.AuthMiddleware(authService),
+				middleware.UpdateRequestContextMiddleware,
+			).Get("/{id}/requests/stream", sseHandler.Stream)
 
 			// Protected session routes
 			r.Route("/{id}", func(r chi.Router) {
