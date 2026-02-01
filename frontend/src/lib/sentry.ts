@@ -83,6 +83,7 @@ export function initSentry(dsn: string, environment: string) {
   Sentry.init({
     dsn,
     environment,
+    tunnel: '/api/sentry-tunnel',
     tracesSampleRate: 0.2,
     replaysSessionSampleRate: 0.1,
     replaysOnErrorSampleRate: 1.0,
