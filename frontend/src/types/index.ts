@@ -47,7 +47,7 @@ export interface SongRequest {
   requestedAt: string
   processedAt?: string
   rejectionReason?: string      // Optional reason provided when rejecting
-  requesterName?: string        // Anonymous identity name of requester (visible to admin only)
+  requesterName?: string        // Anonymous identity name of requester
 }
 
 /**
