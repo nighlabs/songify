@@ -35,7 +35,7 @@ Songify uses two separate Spotify API integrations with distinct permission doma
 - Search is a public endpoint that doesn't require user authorization
 - No access to any user's private data or playlists
 
-**Implementation:** `backend/internal/spotify/client.go`
+**Implementation:** `backend/internal/services/spotify.go`
 
 ```go
 // Backend obtains an app-level token
