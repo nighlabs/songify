@@ -23,5 +23,10 @@ func (h *ConfigHandler) PublicConfig(w http.ResponseWriter, r *http.Request) {
 		"spotifyClientId": h.cfg.SpotifyClientID,
 	}
 
+	if h.cfg.SentryDSNFrontend != "" {
+		response["sentryDsn"] = h.cfg.SentryDSNFrontend
+		response["sentryEnvironment"] = h.cfg.SentryEnvironment
+	}
+
 	writeJSON(w, http.StatusOK, response)
 }

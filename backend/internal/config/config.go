@@ -22,6 +22,9 @@ type Config struct {
 	RateLimitPerMinute    int
 	CORSAllowedOrigins    []string
 	TrustedProxies        []string
+	SentryDSN             string
+	SentryDSNFrontend     string
+	SentryEnvironment     string
 }
 
 // Load reads configuration from environment variables, using defaults where not set.
@@ -38,6 +41,9 @@ func Load() *Config {
 		RateLimitPerMinute:    getIntEnv("RATE_LIMIT_PER_MINUTE", 10),
 		CORSAllowedOrigins:    []string{"http://localhost:5173", "http://localhost:3000"},
 		TrustedProxies:        getStringSliceEnv("TRUSTED_PROXIES"),
+		SentryDSN:             getEnv("SENTRY_DSN", ""),
+		SentryDSNFrontend:     getEnv("SENTRY_DSN_FRONTEND", ""),
+		SentryEnvironment:     getEnv("SENTRY_ENVIRONMENT", "production"),
 	}
 }
 

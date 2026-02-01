@@ -13,6 +13,9 @@ services:
       - ADMIN_TOKEN_DURATION=${ADMIN_TOKEN_DURATION:-168h}
       - FRIEND_TOKEN_DURATION=${FRIEND_TOKEN_DURATION:-12h}
       - RATE_LIMIT_PER_MINUTE=${RATE_LIMIT_PER_MINUTE:-10}
+      - SENTRY_DSN=${SENTRY_DSN:-}
+      - SENTRY_DSN_FRONTEND=${SENTRY_DSN_FRONTEND:-}
+      - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
     volumes:
       - songify-data:/data
     healthcheck:

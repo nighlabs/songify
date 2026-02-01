@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/songify/backend/internal/logging"
 	"github.com/songify/backend/internal/models"
 )
@@ -38,5 +39,11 @@ func writeErrorWithCause(ctx context.Context, w http.ResponseWriter, status int,
 	if status >= 400 && err != nil {
 		wrappedErr := logging.WrapError(err, message)
 		logging.LogErrorWithStatus(ctx, status, "error response", wrappedErr)
+
+		if hub := sentry.GetHubFromContext(ctx); hub != nil {
+			hub.CaptureException(wrappedErr)
+		} else {
+			sentry.CaptureException(wrappedErr)
+		}
 	}
 }

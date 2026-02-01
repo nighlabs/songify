@@ -15,6 +15,7 @@
  * - /callback      : Spotify OAuth callback handler
  */
 
+import * as Sentry from '@sentry/react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'sonner'
@@ -39,24 +40,36 @@ const queryClient = new QueryClient({
   },
 })
 
+function ErrorFallback() {
+  return (
+    <div style={{ padding: '2rem', textAlign: 'center' }}>
+      <h1>Something went wrong</h1>
+      <p>An unexpected error occurred. Please refresh the page to try again.</p>
+      <button onClick={() => window.location.reload()}>Refresh</button>
+    </div>
+  )
+}
+
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <Routes>
-          {/* Public routes */}
-          <Route path="/" element={<HomePage />} />
-          <Route path="/admin" element={<AdminPortalPage />} />
-          <Route path="/admin/create" element={<CreateSessionPage />} />
-          <Route path="/admin/rejoin" element={<RejoinSessionPage />} />
+    <Sentry.ErrorBoundary fallback={ErrorFallback}>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <Routes>
+            {/* Public routes */}
+            <Route path="/" element={<HomePage />} />
+            <Route path="/admin" element={<AdminPortalPage />} />
+            <Route path="/admin/create" element={<CreateSessionPage />} />
+            <Route path="/admin/rejoin" element={<RejoinSessionPage />} />
 
-          {/* Protected routes (require auth token) */}
-          <Route path="/session/:id" element={<SessionPage />} />
-          <Route path="/callback" element={<SpotifyCallbackPage />} />
-        </Routes>
-      </BrowserRouter>
-      <Toaster position="top-center" />
-    </QueryClientProvider>
+            {/* Protected routes (require auth token) */}
+            <Route path="/session/:id" element={<SessionPage />} />
+            <Route path="/callback" element={<SpotifyCallbackPage />} />
+          </Routes>
+        </BrowserRouter>
+        <Toaster position="top-center" />
+      </QueryClientProvider>
+    </Sentry.ErrorBoundary>
   )
 }
 

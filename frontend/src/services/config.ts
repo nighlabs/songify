@@ -9,6 +9,8 @@
 
 export interface AppConfig {
   spotifyClientId: string  // Spotify OAuth client ID for the app
+  sentryDsn?: string       // Sentry DSN for frontend error tracking
+  sentryEnvironment?: string // Sentry environment (e.g. "production")
 }
 
 /** Cached config to avoid repeated API calls */
