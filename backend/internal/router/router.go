@@ -44,6 +44,7 @@ func New(cfg *config.Config, queries *db.Queries) http.Handler {
 	// Handlers
 	adminHandler := handlers.NewAdminHandler(cfg)
 	configHandler := handlers.NewConfigHandler(cfg)
+	sentryTunnelHandler := handlers.NewSentryTunnelHandler(cfg)
 	sessionHandler := handlers.NewSessionHandler(queries, authService, friendKeyService)
 	requestHandler := handlers.NewRequestHandler(queries)
 	spotifyHandler := handlers.NewSpotifyHandler(spotifyService)
@@ -61,6 +62,9 @@ func New(cfg *config.Config, queries *db.Queries) http.Handler {
 
 		// Public configuration (Spotify client ID, etc.)
 		r.Get("/config", configHandler.PublicConfig)
+
+		// Sentry tunnel (proxies browser events to avoid CORS)
+		r.Post("/sentry-tunnel", sentryTunnelHandler.Tunnel)
 
 		// Admin portal verification (no auth required)
 		r.Post("/admin/verify", adminHandler.VerifyPassword)
