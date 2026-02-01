@@ -15,13 +15,21 @@ import (
 // SentryTunnelHandler proxies Sentry envelopes from the browser through the
 // backend, avoiding CORS issues with Sentry's ingest endpoint.
 type SentryTunnelHandler struct {
-	cfg    *config.Config
-	client *http.Client
+	cfg       *config.Config
+	client    *http.Client
+	ingestURL string
 }
 
 // NewSentryTunnelHandler creates a SentryTunnelHandler with the given configuration.
 func NewSentryTunnelHandler(cfg *config.Config) *SentryTunnelHandler {
-	return &SentryTunnelHandler{cfg: cfg, client: &http.Client{}}
+	h := &SentryTunnelHandler{cfg: cfg, client: &http.Client{}}
+	if cfg.SentryDSNFrontend != "" {
+		if dsnURL, err := url.Parse(cfg.SentryDSNFrontend); err == nil {
+			projectID := strings.TrimPrefix(dsnURL.Path, "/")
+			h.ingestURL = "https://" + dsnURL.Host + "/api/" + projectID + "/envelope/"
+		}
+	}
+	return h
 }
 
 // Tunnel reads a Sentry envelope from the request body, validates the DSN
@@ -59,18 +67,7 @@ func (h *SentryTunnelHandler) Tunnel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse the DSN to build the ingest URL
-	dsnURL, err := url.Parse(header.DSN)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	// DSN format: https://<key>@<host>/<project_id>
-	projectID := strings.TrimPrefix(dsnURL.Path, "/")
-	ingestURL := "https://" + dsnURL.Host + "/api/" + projectID + "/envelope/"
-
-	req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, ingestURL, strings.NewReader(string(body)))
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, h.ingestURL, strings.NewReader(string(body)))
 	if err != nil {
 		slog.Error("failed to create sentry tunnel request", slog.String("error", err.Error()))
 		w.WriteHeader(http.StatusInternalServerError)
