@@ -50,6 +50,7 @@ import {
   tryRestoreSpotifySession,
 } from '@/services/spotify'
 import { useClickOutside } from '@/hooks/useClickOutside'
+import { useRequestsSSE } from '@/hooks/useRequestsSSE'
 import { formatDuration } from '@/lib/utils'
 
 /** Cached playlist info for display in SpotifyStatus */
@@ -281,7 +282,7 @@ export function SessionPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { isAdmin, friendAccessKey, logout, sessionId } = useAuthStore()
+  const { isAdmin, friendAccessKey, logout, sessionId, token } = useAuthStore()
 
   // ----- Local State -----
   const [searchQuery, setSearchQuery] = useState('')
@@ -289,6 +290,7 @@ export function SessionPage() {
   const [isSearching, setIsSearching] = useState(false)
   const [copiedKey, setCopiedKey] = useState(false)
   const [approveError, setApproveError] = useState<string | null>(null)
+  const [usePolling, setUsePolling] = useState(false)
 
   // Search filter state
   const [artistFilter, setArtistFilter] = useState('')
@@ -333,8 +335,15 @@ export function SessionPage() {
     queryKey: ['requests', id],
     queryFn: () => api.getSongRequests(id!),
     enabled: !!id,
-    refetchInterval: 5000,
+    refetchInterval: usePolling ? 5000 : false,
     refetchIntervalInBackground: false, // Don't poll when tab is not visible
+  })
+
+  // SSE for real-time updates (falls back to polling on repeated failures)
+  useRequestsSSE({
+    sessionId: id,
+    token,
+    onFallbackToPolling: () => setUsePolling(true),
   })
 
   // ----- Mutations -----

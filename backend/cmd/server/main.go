@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/getsentry/sentry-go"
+	"github.com/songify/backend/internal/broker"
 	"github.com/songify/backend/internal/config"
 	"github.com/songify/backend/internal/database"
 	"github.com/songify/backend/internal/db"
@@ -58,8 +59,11 @@ func main() {
 	// Initialize queries
 	queries := db.New(sqlDB)
 
+	// Create event broker for SSE
+	eventBroker := broker.New()
+
 	// Create router
-	r := router.New(cfg, queries)
+	r := router.New(cfg, queries, eventBroker)
 
 	// Start server
 	addr := ":" + cfg.Port
