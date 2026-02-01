@@ -21,6 +21,10 @@ export function useRequestsSSE({ sessionId, token, onFallbackToPolling }: UseReq
   const failuresRef = useRef<number[]>([])
   const fallbackTriggeredRef = useRef(false)
   const esRef = useRef<EventSource | null>(null)
+  const onFallbackRef = useRef(onFallbackToPolling)
+  useEffect(() => {
+    onFallbackRef.current = onFallbackToPolling
+  }, [onFallbackToPolling])
 
   useEffect(() => {
     if (!sessionId || !token || fallbackTriggeredRef.current) return
@@ -51,7 +55,7 @@ export function useRequestsSSE({ sessionId, token, onFallbackToPolling }: UseReq
 
         if (failuresRef.current.length >= 5) {
           fallbackTriggeredRef.current = true
-          onFallbackToPolling()
+          onFallbackRef.current()
           return
         }
 
@@ -82,5 +86,5 @@ export function useRequestsSSE({ sessionId, token, onFallbackToPolling }: UseReq
       esRef.current?.close()
       esRef.current = null
     }
-  }, [sessionId, token, queryClient, onFallbackToPolling])
+  }, [sessionId, token, queryClient])
 }
