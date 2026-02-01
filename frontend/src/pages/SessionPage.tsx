@@ -779,7 +779,7 @@ export function SessionPage() {
                         <p className="text-sm text-muted-foreground">
                           {request.artistNames} • {request.albumName}
                         </p>
-                        {isAdmin && request.requesterName && (
+                        {request.requesterName && (
                           <p className="text-xs text-muted-foreground/70">
                             Requested by {request.requesterName}
                           </p>
@@ -854,6 +854,11 @@ export function SessionPage() {
                         <p className="text-sm text-muted-foreground">
                           {request.artistNames}
                         </p>
+                        {request.requesterName && (
+                          <p className="text-xs text-muted-foreground/70">
+                            Requested by {request.requesterName}
+                          </p>
+                        )}
                         {request.rejectionReason && (
                           <p className="text-xs text-red-600 mt-1">
                             Reason: {request.rejectionReason}
