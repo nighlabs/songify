@@ -6,10 +6,15 @@ A collaborative playlist request app where friends can search for songs and subm
 
 - **Easy Access**: Friends join with memorable keys like `happy-tiger-42`
 - **Song Search**: Search Spotify's catalog without needing a Spotify account
+- **Real-Time Updates**: Live request feed via Server-Sent Events (SSE)
 - **Request Queue**: See pending, approved, and rejected requests in real-time
-- **Admin Controls**: Approve or reject requests with one click
+- **Requester Names**: See who requested each song
+- **Admin Controls**: Approve or reject requests with one click; archive cleared requests
+- **Duration Limits**: Admins can set maximum song duration for requests
+- **Prohibited Patterns**: Block requests matching artist or track name patterns
 - **Spotify Integration**: Approved songs are automatically added to your playlist
 - **Secure**: Passwords are hashed client-side; the server never sees plaintext
+- **Error Tracking**: Optional Sentry integration for backend and frontend
 
 ## Tech Stack
 
@@ -35,7 +40,7 @@ A collaborative playlist request app where friends can search for songs and subm
 - Docker and Docker Compose
 
 **For local development:**
-- Go 1.21+
+- Go 1.25+
 - Node.js 18+
 
 **Both require:**
@@ -136,17 +141,26 @@ The frontend runs on `http://localhost:5173`.
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
+| GET | `/api/health` | None | Health check |
+| GET | `/api/config` | None | Get public configuration |
+| POST | `/api/sentry-tunnel` | None | Proxy frontend Sentry events |
 | POST | `/api/admin/verify` | None | Verify admin portal password |
 | POST | `/api/sessions` | None | Create new session |
 | POST | `/api/sessions/join` | None | Join with friend key |
 | POST | `/api/sessions/rejoin` | None | Rejoin as admin |
 | GET | `/api/sessions/{id}` | JWT | Get session details |
+| PUT | `/api/sessions/{id}/playlist` | JWT | Update linked playlist |
+| PUT | `/api/sessions/{id}/settings/duration-limit` | Admin | Update duration limit |
+| GET | `/api/sessions/{id}/patterns` | Admin | List prohibited patterns |
+| POST | `/api/sessions/{id}/patterns` | Admin | Create prohibited pattern |
+| DELETE | `/api/sessions/{id}/patterns/{patternId}` | Admin | Delete prohibited pattern |
 | GET | `/api/sessions/{id}/requests` | JWT | List song requests |
 | POST | `/api/sessions/{id}/requests` | JWT | Submit request |
+| GET | `/api/sessions/{id}/requests/stream` | JWT | SSE stream for real-time updates |
 | PUT | `/api/sessions/{id}/requests/{rid}/approve` | Admin | Approve request |
 | PUT | `/api/sessions/{id}/requests/{rid}/reject` | Admin | Reject request |
+| DELETE | `/api/sessions/{id}/requests` | Admin | Archive all requests |
 | GET | `/api/spotify/search` | Rate limited | Search Spotify |
-| GET | `/api/config` | None | Get public configuration |
 
 ## Configuration
 
@@ -163,6 +177,10 @@ The frontend runs on `http://localhost:5173`.
 | `ADMIN_TOKEN_DURATION` | `168h` | Admin JWT validity (7 days) |
 | `FRIEND_TOKEN_DURATION` | `12h` | Friend JWT validity |
 | `RATE_LIMIT_PER_MINUTE` | `10` | Search rate limit per IP |
+| `TRUSTED_PROXIES` | - | Comma-separated trusted proxy CIDRs |
+| `SENTRY_DSN` | - | Sentry DSN for backend error tracking |
+| `SENTRY_DSN_FRONTEND` | - | Sentry DSN served to frontend via `/api/config` |
+| `SENTRY_ENVIRONMENT` | `production` | Sentry environment name |
 
 ## CI/CD
 
@@ -196,6 +214,7 @@ songify/
 ├── backend/
 │   ├── cmd/server/          # Entry point
 │   └── internal/
+│       ├── broker/           # SSE event broker
 │       ├── config/          # Environment config
 │       ├── database/        # DB connection & migrations
 │       ├── db/              # sqlc generated code
