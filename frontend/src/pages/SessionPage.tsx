@@ -688,8 +688,8 @@ export function SessionPage() {
                           />
                         )}
                         <div className="min-w-0">
-                          <p className="font-medium truncate">{track.name}</p>
-                          <p className="text-sm text-muted-foreground truncate">
+                          <p className="font-medium">{track.name}</p>
+                          <p className="text-sm text-muted-foreground">
                             {track.artists.join(', ')} • {track.albumName}
                           </p>
                         </div>
@@ -775,12 +775,12 @@ export function SessionPage() {
                         />
                       )}
                       <div className="min-w-0">
-                        <p className="font-medium truncate">{request.trackName}</p>
-                        <p className="text-sm text-muted-foreground truncate">
+                        <p className="font-medium">{request.trackName}</p>
+                        <p className="text-sm text-muted-foreground">
                           {request.artistNames} • {request.albumName}
                         </p>
                         {isAdmin && request.requesterName && (
-                          <p className="text-xs text-muted-foreground/70 truncate">
+                          <p className="text-xs text-muted-foreground/70">
                             Requested by {request.requesterName}
                           </p>
                         )}
@@ -850,8 +850,8 @@ export function SessionPage() {
                         />
                       )}
                       <div className="min-w-0">
-                        <p className="font-medium truncate">{request.trackName}</p>
-                        <p className="text-sm text-muted-foreground truncate">
+                        <p className="font-medium">{request.trackName}</p>
+                        <p className="text-sm text-muted-foreground">
                           {request.artistNames}
                         </p>
                         {request.rejectionReason && (
