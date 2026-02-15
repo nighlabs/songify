@@ -14,7 +14,7 @@
 
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, ArrowLeft } from 'lucide-react'
+import { Plus, ArrowLeft, Music } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -31,6 +31,7 @@ export function CreateSessionPage() {
   const [adminName, setAdminName] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [musicService, setMusicService] = useState<'spotify' | 'youtube'>('spotify')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -61,6 +62,7 @@ export function CreateSessionPage() {
         displayName,
         adminName,
         adminPasswordHash: passwordHash,
+        musicService,
       })
 
       setAdminAuth(
@@ -109,6 +111,35 @@ export function CreateSessionPage() {
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Music Service</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={musicService === 'spotify' ? 'default' : 'outline'}
+                    className={musicService === 'spotify' ? 'bg-green-600 hover:bg-green-700 flex-1' : 'flex-1'}
+                    onClick={() => setMusicService('spotify')}
+                  >
+                    <Music className="h-4 w-4 mr-2" />
+                    Spotify
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={musicService === 'youtube' ? 'default' : 'outline'}
+                    className={musicService === 'youtube' ? 'bg-red-600 hover:bg-red-700 flex-1' : 'flex-1'}
+                    onClick={() => setMusicService('youtube')}
+                  >
+                    <Music className="h-4 w-4 mr-2" />
+                    YouTube
+                  </Button>
+                </div>
+                {musicService === 'youtube' && (
+                  <p className="text-xs text-muted-foreground">
+                    YouTube integration coming soon
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">

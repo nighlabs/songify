@@ -46,6 +46,14 @@ func (h *SessionHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.MusicService == "" {
+		req.MusicService = "spotify"
+	}
+	if req.MusicService != "spotify" && req.MusicService != "youtube" {
+		writeError(w, http.StatusBadRequest, "musicService must be 'spotify' or 'youtube'")
+		return
+	}
+
 	friendKey, err := h.friendKeyService.Generate(r.Context())
 	if err != nil {
 		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to generate friend key", err)
@@ -71,6 +79,7 @@ func (h *SessionHandler) Create(w http.ResponseWriter, r *http.Request) {
 		FriendAccessKey:     friendKey,
 		SpotifyPlaylistID:   playlistID,
 		SongDurationLimitMs: durationLimit,
+		MusicService:        req.MusicService,
 	})
 	if err != nil {
 		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to create session", err)
@@ -234,11 +243,12 @@ func (h *SessionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	isAdmin := claims.Role == services.RoleAdmin
 
 	resp := models.SessionResponse{
-		ID:          session.ID,
-		DisplayName: session.DisplayName,
-		AdminName:   session.AdminName,
-		CreatedAt:   session.CreatedAt.Time,
-		IsAdmin:     isAdmin,
+		ID:           session.ID,
+		DisplayName:  session.DisplayName,
+		AdminName:    session.AdminName,
+		MusicService: session.MusicService,
+		CreatedAt:    session.CreatedAt.Time,
+		IsAdmin:      isAdmin,
 	}
 
 	if session.SpotifyPlaylistID.Valid {

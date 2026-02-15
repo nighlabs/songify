@@ -1,6 +1,6 @@
 -- name: CreateSession :one
-INSERT INTO sessions (id, display_name, admin_name, admin_password_hash, friend_access_key, spotify_playlist_id, song_duration_limit_ms)
-VALUES (?, ?, ?, ?, ?, ?, ?)
+INSERT INTO sessions (id, display_name, admin_name, admin_password_hash, friend_access_key, spotify_playlist_id, song_duration_limit_ms, music_service)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING *;
 
 -- name: GetSessionByID :one
