@@ -7,8 +7,13 @@
  * environment-specific values.
  */
 
+export interface SpotifyConfig {
+  clientId: string  // Spotify OAuth client ID
+}
+
 export interface AppConfig {
-  spotifyClientId: string  // Spotify OAuth client ID for the app
+  spotifyClientId: string  // Spotify OAuth client ID for the app (flat, backward compat)
+  spotify: SpotifyConfig   // Namespaced Spotify configuration
   sentryDsn?: string       // Sentry DSN for frontend error tracking
   sentryEnvironment?: string // Sentry environment (e.g. "production")
 }
