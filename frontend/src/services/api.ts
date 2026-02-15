@@ -178,7 +178,7 @@ export const api = {
 
   /** Link a Spotify playlist to the session */
   updateSessionPlaylist: async (sessionId: string, spotifyPlaylistId: string, spotifyPlaylistName: string): Promise<void> => {
-    return request(`/sessions/${sessionId}/playlist`, {
+    return request(`/sessions/${sessionId}/spotify/playlist`, {
       method: 'PUT',
       body: JSON.stringify({ spotifyPlaylistId, spotifyPlaylistName }),
     })

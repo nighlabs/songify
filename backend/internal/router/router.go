@@ -49,7 +49,7 @@ func New(cfg *config.Config, queries *db.Queries, eventBroker *broker.Broker) ht
 	sessionHandler := handlers.NewSessionHandler(queries, authService, friendKeyService)
 	requestHandler := handlers.NewRequestHandler(queries, eventBroker)
 	sseHandler := handlers.NewSSEHandler(eventBroker)
-	spotifyHandler := handlers.NewSpotifyHandler(spotifyService)
+	spotifyHandler := handlers.NewSpotifyHandler(spotifyService, queries)
 
 	// Rate limiter for search
 	searchRateLimiter := middleware.NewRateLimiter(cfg.RateLimitPerMinute)
@@ -95,7 +95,7 @@ func New(cfg *config.Config, queries *db.Queries, eventBroker *broker.Broker) ht
 				r.Use(middleware.UpdateRequestContextMiddleware)
 
 				r.Get("/", sessionHandler.Get)
-				r.Put("/playlist", sessionHandler.UpdatePlaylist)
+				r.Put("/spotify/playlist", spotifyHandler.UpdatePlaylist)
 
 				// Admin-only settings routes
 				r.Route("/settings", func(r chi.Router) {
