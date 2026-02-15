@@ -82,8 +82,8 @@ func (h *RequestHandler) Submit(w http.ResponseWriter, r *http.Request) {
 
 	// Check for duplicate
 	isDuplicate, err := h.queries.IsDuplicateRequest(r.Context(), db.IsDuplicateRequestParams{
-		SessionID:      sessionID,
-		SpotifyTrackID: req.SpotifyTrackID,
+		SessionID:       sessionID,
+		ExternalTrackID: req.ExternalTrackID,
 	})
 	if err == nil && isDuplicate == 1 {
 		writeError(w, http.StatusConflict, "song already requested")
@@ -116,15 +116,15 @@ func (h *RequestHandler) Submit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	songRequest, err := h.queries.CreateSongRequest(r.Context(), db.CreateSongRequestParams{
-		SessionID:      sessionID,
-		SpotifyTrackID: req.SpotifyTrackID,
-		TrackName:      req.TrackName,
-		ArtistNames:    req.ArtistNames,
-		AlbumName:      req.AlbumName,
-		AlbumArtUrl:    albumArtURL,
-		DurationMs:     req.DurationMS,
-		SpotifyUri:     req.SpotifyURI,
-		RequesterName:  requesterName,
+		SessionID:       sessionID,
+		ExternalTrackID: req.ExternalTrackID,
+		TrackName:       req.TrackName,
+		ArtistNames:     req.ArtistNames,
+		AlbumName:       req.AlbumName,
+		AlbumArtUrl:     albumArtURL,
+		DurationMs:      req.DurationMS,
+		ExternalUri:     req.ExternalURI,
+		RequesterName:   requesterName,
 	})
 	if err != nil {
 		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to create request", err)
@@ -262,15 +262,15 @@ func (h *RequestHandler) ArchiveAll(w http.ResponseWriter, r *http.Request) {
 // songRequestToResponse converts a database song request to the API response format.
 func songRequestToResponse(req db.SongRequest) models.SongRequestResponse {
 	resp := models.SongRequestResponse{
-		ID:             req.ID,
-		SpotifyTrackID: req.SpotifyTrackID,
-		TrackName:      req.TrackName,
-		ArtistNames:    req.ArtistNames,
-		AlbumName:      req.AlbumName,
-		DurationMS:     req.DurationMs,
-		SpotifyURI:     req.SpotifyUri,
-		Status:         req.Status,
-		RequestedAt:    req.RequestedAt.Time,
+		ID:              req.ID,
+		ExternalTrackID: req.ExternalTrackID,
+		TrackName:       req.TrackName,
+		ArtistNames:     req.ArtistNames,
+		AlbumName:       req.AlbumName,
+		DurationMS:      req.DurationMs,
+		ExternalURI:     req.ExternalUri,
+		Status:          req.Status,
+		RequestedAt:     req.RequestedAt.Time,
 	}
 
 	if req.AlbumArtUrl.Valid {

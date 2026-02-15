@@ -81,29 +81,29 @@ type SessionResponse struct {
 	IsAdmin             bool                        `json:"isAdmin"`
 }
 
-// SubmitSongRequestRequest contains the Spotify track metadata for a song request.
-// All fields come from the Spotify API search results.
+// SubmitSongRequestRequest contains the track metadata for a song request.
+// Fields come from Spotify or YouTube search results.
 type SubmitSongRequestRequest struct {
-	SpotifyTrackID string `json:"spotifyTrackId"`
-	TrackName      string `json:"trackName"`
-	ArtistNames    string `json:"artistNames"`
-	AlbumName      string `json:"albumName"`
-	AlbumArtURL    string `json:"albumArtUrl,omitempty"`
-	DurationMS     int64  `json:"durationMs"`
-	SpotifyURI     string `json:"spotifyUri"`
+	ExternalTrackID string `json:"externalTrackId"`
+	TrackName       string `json:"trackName"`
+	ArtistNames     string `json:"artistNames"`
+	AlbumName       string `json:"albumName"`
+	AlbumArtURL     string `json:"albumArtUrl,omitempty"`
+	DurationMS      int64  `json:"durationMs"`
+	ExternalURI     string `json:"externalUri"`
 }
 
 // SongRequestResponse represents a song request with its current status.
 // Status is one of: "pending", "approved", "rejected".
 type SongRequestResponse struct {
 	ID              int64      `json:"id"`
-	SpotifyTrackID  string     `json:"spotifyTrackId"`
+	ExternalTrackID string     `json:"externalTrackId"`
 	TrackName       string     `json:"trackName"`
 	ArtistNames     string     `json:"artistNames"`
 	AlbumName       string     `json:"albumName"`
 	AlbumArtURL     *string    `json:"albumArtUrl,omitempty"`
 	DurationMS      int64      `json:"durationMs"`
-	SpotifyURI      string     `json:"spotifyUri"`
+	ExternalURI     string     `json:"externalUri"`
 	Status          string     `json:"status"`
 	RequestedAt     time.Time  `json:"requestedAt"`
 	ProcessedAt     *time.Time `json:"processedAt,omitempty"`
@@ -156,6 +156,20 @@ type ProhibitedPatternResponse struct {
 	ID          int64  `json:"id"`
 	PatternType string `json:"patternType"`
 	Pattern     string `json:"pattern"`
+}
+
+// YouTubeSearchResponse wraps the video results from a YouTube search.
+type YouTubeSearchResponse struct {
+	Videos []YouTubeVideoResponse `json:"videos"`
+}
+
+// YouTubeVideoResponse contains video metadata from YouTube's API,
+// formatted for the frontend to display and submit as a request.
+type YouTubeVideoResponse struct {
+	ID           string `json:"id"`
+	Title        string `json:"title"`
+	ChannelTitle string `json:"channelTitle"`
+	ThumbnailURL string `json:"thumbnailUrl"`
 }
 
 // ErrorResponse is the standard error format returned by all endpoints.

@@ -17,6 +17,7 @@ type Config struct {
 	AdminPortalPassword   string
 	SpotifyClientID       string
 	SpotifyClientSecret   string
+	YouTubeAPIKey         string
 	AdminTokenDuration    time.Duration
 	FriendTokenDuration   time.Duration
 	RateLimitPerMinute    int
@@ -36,6 +37,7 @@ func Load() *Config {
 		AdminPortalPassword:   getEnv("ADMIN_PORTAL_PASSWORD", "admin123"),     // #nosec G101 -- intentional dev default
 		SpotifyClientID:       getEnv("SPOTIFY_CLIENT_ID", ""),
 		SpotifyClientSecret:   getEnv("SPOTIFY_CLIENT_SECRET", ""),
+		YouTubeAPIKey:         getEnv("YOUTUBE_API_KEY", ""),
 		AdminTokenDuration:    getDurationEnv("ADMIN_TOKEN_DURATION", 7*24*time.Hour),
 		FriendTokenDuration:   getDurationEnv("FRIEND_TOKEN_DURATION", 12*time.Hour),
 		RateLimitPerMinute:    getIntEnv("RATE_LIMIT_PER_MINUTE", 10),

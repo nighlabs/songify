@@ -1,4 +1,10 @@
-# Spotify Integration Architecture
+# Music Services Architecture
+
+Songify supports multiple music services. Each session is tied to a single service (Spotify or YouTube), chosen at creation time.
+
+---
+
+# Spotify Integration
 
 Songify uses two separate Spotify API integrations with distinct permission domains. This separation ensures that playlist management remains under the admin's control while allowing the backend to handle search functionality independently.
 
@@ -183,3 +189,89 @@ Configure your Spotify Developer App with:
 2. **Security:** Backend credentials never exposed; admin tokens never leave their browser
 3. **User consent:** Only admins need to authorize; friends just search and request
 4. **Simplicity:** Friends don't need Spotify accounts to participate
+
+---
+
+# YouTube Integration
+
+YouTube sessions use the YouTube Data API v3 for video search. This is simpler than Spotify since it only requires an API key (no OAuth flow).
+
+## Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                      YouTube Data API v3                              │
+└─────────────────────────────────────────────────────────────────────┘
+          ▲
+          │
+          │ API Key
+          │ (Server-side only)
+          │
+┌─────────┴─────────┐
+│      Backend      │
+│                   │
+│  • Search videos  │
+│                   │
+└───────────────────┘
+```
+
+## Backend: API Key Authentication
+
+**Purpose:** YouTube video search for all users (admins and friends)
+
+**Authentication:** API key
+- Uses `YOUTUBE_API_KEY` environment variable
+- No OAuth flow needed — simpler than Spotify
+- No token refresh or expiration to manage
+
+**Permissions:** Public data only
+- Search is a public endpoint
+- No access to any user's private data
+
+**Implementation:** `backend/internal/services/youtube.go`
+
+## Search Flow (All Users)
+
+```
+User                    Frontend                Backend                 YouTube
+  │                        │                       │                       │
+  │  Search "video name"   │                       │                       │
+  │───────────────────────>│                       │                       │
+  │                        │  GET /api/youtube/search?q=...                │
+  │                        │──────────────────────>│                       │
+  │                        │                       │  Search (API key)     │
+  │                        │                       │──────────────────────>│
+  │                        │                       │<──────────────────────│
+  │                        │<──────────────────────│                       │
+  │  Display results       │                       │                       │
+  │<───────────────────────│                       │                       │
+```
+
+## Approval Flow
+
+Unlike Spotify sessions, YouTube sessions have no playlist integration. When an admin approves a request, it is simply marked as approved in the database.
+
+```
+Admin                   Frontend                Backend
+  │                        │                       │
+  │  Approve video         │                       │
+  │───────────────────────>│                       │
+  │                        │  PUT /api/.../approve │
+  │                        │──────────────────────>│
+  │                        │                       │  Mark approved in DB
+  │                        │<──────────────────────│
+  │  Show success          │                       │
+  │<───────────────────────│                       │
+```
+
+## Configuration
+
+### Environment Variables (Backend)
+
+```bash
+YOUTUBE_API_KEY=your_api_key
+```
+
+### Quota
+
+The YouTube Data API v3 has a default quota of 10,000 units per day. Each search request costs 100 units, allowing approximately 100 searches per day. If you need more, request a quota increase in the Google Cloud Console.

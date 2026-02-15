@@ -32,13 +32,13 @@ type Session struct {
 type SongRequest struct {
 	ID              int64          `json:"id"`
 	SessionID       string         `json:"session_id"`
-	SpotifyTrackID  string         `json:"spotify_track_id"`
+	ExternalTrackID string         `json:"external_track_id"`
 	TrackName       string         `json:"track_name"`
 	ArtistNames     string         `json:"artist_names"`
 	AlbumName       string         `json:"album_name"`
 	AlbumArtUrl     sql.NullString `json:"album_art_url"`
 	DurationMs      int64          `json:"duration_ms"`
-	SpotifyUri      string         `json:"spotify_uri"`
+	ExternalUri     string         `json:"external_uri"`
 	Status          string         `json:"status"`
 	RequestedAt     sql.NullTime   `json:"requested_at"`
 	ProcessedAt     sql.NullTime   `json:"processed_at"`

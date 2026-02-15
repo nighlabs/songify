@@ -8,6 +8,7 @@ import type {
   Session,
   SongRequest,
   SpotifyTrack,
+  YouTubeVideo,
   CreateSessionRequest,
   CreateSessionResponse,
   JoinSessionResponse,
@@ -132,13 +133,13 @@ export const api = {
     return request(`/sessions/${sessionId}/requests`, {
       method: 'POST',
       body: JSON.stringify({
-        spotifyTrackId: track.id,
+        externalTrackId: track.id,
         trackName: track.name,
         artistNames: track.artists.join(', '),
         albumName: track.albumName,
         albumArtUrl: track.albumArtUrl,
         durationMs: track.durationMs,
-        spotifyUri: track.uri,
+        externalUri: track.uri,
       }),
     })
   },
@@ -174,6 +175,32 @@ export const api = {
   /** Search Spotify for tracks (proxied through backend) */
   searchSpotify: async (query: string): Promise<{ tracks: SpotifyTrack[] }> => {
     return request(`/spotify/search?q=${encodeURIComponent(query)}`)
+  },
+
+  // ----- YouTube Integration -----
+
+  /** Search YouTube for videos (proxied through backend) */
+  searchYouTube: async (query: string): Promise<{ videos: YouTubeVideo[] }> => {
+    return request(`/youtube/search?q=${encodeURIComponent(query)}`)
+  },
+
+  /** Submit a YouTube video as a song request */
+  submitYouTubeRequest: async (
+    sessionId: string,
+    video: YouTubeVideo
+  ): Promise<SongRequest> => {
+    return request(`/sessions/${sessionId}/requests`, {
+      method: 'POST',
+      body: JSON.stringify({
+        externalTrackId: video.id,
+        trackName: video.title,
+        artistNames: video.channelTitle,
+        albumName: '',
+        albumArtUrl: video.thumbnailUrl,
+        durationMs: 0,
+        externalUri: `https://www.youtube.com/watch?v=${video.id}`,
+      }),
+    })
   },
 
   /** Link a Spotify playlist to the session */
