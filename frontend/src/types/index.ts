@@ -37,18 +37,28 @@ export interface Session {
  */
 export interface SongRequest {
   id: number
-  spotifyTrackId: string
+  externalTrackId: string
   trackName: string
   artistNames: string           // Comma-separated list of artist names
   albumName: string
   albumArtUrl?: string
   durationMs: number
-  spotifyUri: string            // Spotify URI for adding to playlist (e.g., "spotify:track:...")
+  externalUri: string           // External URI (Spotify URI or YouTube URL)
   status: 'pending' | 'approved' | 'rejected'
   requestedAt: string
   processedAt?: string
   rejectionReason?: string      // Optional reason provided when rejecting
   requesterName?: string        // Anonymous identity name of requester
+}
+
+/**
+ * A video from YouTube search results.
+ */
+export interface YouTubeVideo {
+  id: string
+  title: string
+  channelTitle: string
+  thumbnailUrl: string
 }
 
 /**

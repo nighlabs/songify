@@ -135,11 +135,6 @@ export function CreateSessionPage() {
                     YouTube
                   </Button>
                 </div>
-                {musicService === 'youtube' && (
-                  <p className="text-xs text-muted-foreground">
-                    YouTube integration coming soon
-                  </p>
-                )}
               </div>
 
               <div className="space-y-2">

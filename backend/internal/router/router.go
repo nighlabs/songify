@@ -41,6 +41,7 @@ func New(cfg *config.Config, queries *db.Queries, eventBroker *broker.Broker) ht
 	authService := services.NewAuthService(cfg.JWTSecret, cfg.AdminTokenDuration, cfg.FriendTokenDuration)
 	friendKeyService := services.NewFriendKeyService(queries)
 	spotifyService := services.NewSpotifyService(cfg.SpotifyClientID, cfg.SpotifyClientSecret)
+	youtubeService := services.NewYouTubeService(cfg.YouTubeAPIKey)
 
 	// Handlers
 	adminHandler := handlers.NewAdminHandler(cfg)
@@ -50,6 +51,7 @@ func New(cfg *config.Config, queries *db.Queries, eventBroker *broker.Broker) ht
 	requestHandler := handlers.NewRequestHandler(queries, eventBroker)
 	sseHandler := handlers.NewSSEHandler(eventBroker)
 	spotifyHandler := handlers.NewSpotifyHandler(spotifyService, queries)
+	youtubeHandler := handlers.NewYouTubeHandler(youtubeService, queries)
 
 	// Rate limiter for search
 	searchRateLimiter := middleware.NewRateLimiter(cfg.RateLimitPerMinute)
@@ -131,6 +133,9 @@ func New(cfg *config.Config, queries *db.Queries, eventBroker *broker.Broker) ht
 
 		// Spotify search (rate limited)
 		r.With(searchRateLimiter.Middleware).Get("/spotify/search", spotifyHandler.Search)
+
+		// YouTube search (rate limited)
+		r.With(searchRateLimiter.Middleware).Get("/youtube/search", youtubeHandler.Search)
 	})
 
 	return r

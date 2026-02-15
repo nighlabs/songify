@@ -41,7 +41,7 @@ import { Badge } from '@/components/ui/badge'
 import { AdminSettings } from '@/components/AdminSettings'
 import { api } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
-import type { Session, SongRequest, SpotifyTrack } from '@/types'
+import type { Session, SongRequest, SpotifyTrack, YouTubeVideo } from '@/types'
 import {
   authenticateSpotify,
   isSpotifyAuthenticated,
@@ -287,6 +287,7 @@ export function SessionPage() {
   // ----- Local State -----
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<SpotifyTrack[]>([])
+  const [youtubeResults, setYoutubeResults] = useState<YouTubeVideo[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const [copiedKey, setCopiedKey] = useState(false)
   const [approveError, setApproveError] = useState<string | null>(null)
@@ -362,23 +363,39 @@ export function SessionPage() {
     },
   })
 
+  // Submit a YouTube video request (available to all users)
+  const submitYouTubeMutation = useMutation({
+    mutationFn: (video: YouTubeVideo) => api.submitYouTubeRequest(id!, video),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['requests', id] })
+      setSearchQuery('')
+      setYoutubeResults([])
+      toast.success('Song request submitted')
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to submit song request')
+    },
+  })
+
   // Approve a request (admin only)
   // Order: Check Spotify auth -> Add to playlist -> Mark approved in backend
   const approveMutation = useMutation({
     mutationFn: async (requestId: number) => {
-      // Block approval if playlist is linked but Spotify isn't connected
-      if (session?.spotifyPlaylistId && !isSpotifyAuthenticated()) {
-        throw new Error('Spotify connection required. Please reconnect to Spotify to approve songs.')
+      if (session?.musicService !== 'youtube') {
+        // Block approval if playlist is linked but Spotify isn't connected
+        if (session?.spotifyPlaylistId && !isSpotifyAuthenticated()) {
+          throw new Error('Spotify connection required. Please reconnect to Spotify to approve songs.')
+        }
+
+        const request = requests.find((r) => r.id === requestId)
+
+        // Add to Spotify playlist first - ensures we don't mark approved if Spotify fails
+        if (session?.spotifyPlaylistId && isSpotifyAuthenticated() && request) {
+          await addTrackToPlaylist(session.spotifyPlaylistId, request.externalUri)
+        }
       }
 
-      const request = requests.find((r) => r.id === requestId)
-
-      // Add to Spotify playlist first - ensures we don't mark approved if Spotify fails
-      if (session?.spotifyPlaylistId && isSpotifyAuthenticated() && request) {
-        await addTrackToPlaylist(session.spotifyPlaylistId, request.spotifyUri)
-      }
-
-      // Only mark as approved after successful Spotify add
+      // Only mark as approved after successful Spotify add (or for YouTube, just approve directly)
       return api.approveSongRequest(id!, requestId)
     },
     onSuccess: () => {
@@ -423,6 +440,23 @@ export function SessionPage() {
     try {
       const response = await api.searchSpotify(query)
       setSearchResults(response.tracks)
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Search failed'
+      toast.error(message)
+    } finally {
+      setIsSearching(false)
+    }
+  }
+
+  // Search YouTube for videos
+  const handleYouTubeSearch = async () => {
+    const query = searchQuery.trim()
+    if (!query) return
+
+    setIsSearching(true)
+    try {
+      const response = await api.searchYouTube(query)
+      setYoutubeResults(response.videos)
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Search failed'
       toast.error(message)
@@ -488,6 +522,37 @@ export function SessionPage() {
       return null
     }
   }, [session])
+
+  /**
+   * Check if a YouTube video should be blocked based on session settings.
+   * Returns a human-readable reason if blocked, null otherwise.
+   */
+  const getYouTubeBlockReason = useMemo(() => {
+    return (video: YouTubeVideo): string | null => {
+      if (!session) return null
+
+      for (const p of session.prohibitedPatterns || []) {
+        if (p.patternType === 'artist' &&
+            video.channelTitle.toLowerCase().includes(p.pattern.toLowerCase())) {
+          return `Channel matches prohibited pattern "${p.pattern}"`
+        }
+        if (p.patternType === 'title' &&
+            video.title.toLowerCase().includes(p.pattern.toLowerCase())) {
+          return `Title matches prohibited pattern "${p.pattern}"`
+        }
+      }
+
+      return null
+    }
+  }, [session])
+
+  /** Get the external link URL for a song request based on the session's music service */
+  const getExternalLink = (request: SongRequest): string => {
+    if (session?.musicService === 'youtube') {
+      return request.externalUri
+    }
+    return `https://open.spotify.com/track/${request.externalTrackId}`
+  }
 
   if (sessionLoading) {
     return (
@@ -556,12 +621,109 @@ export function SessionPage() {
         {/* Search Section */}
         {session?.musicService === 'youtube' ? (
           <Card>
-            <CardContent className="py-12 text-center">
-              <Music className="h-12 w-12 mx-auto text-red-400 mb-4" />
-              <h3 className="text-lg font-medium">YouTube Coming Soon</h3>
-              <p className="text-muted-foreground">
-                YouTube music integration is not yet available. Stay tuned!
-              </p>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Search className="h-5 w-5" />
+                Search Videos
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Input
+                    placeholder="Search for a video..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleYouTubeSearch()}
+                    className={searchQuery || youtubeResults.length > 0 ? 'pr-8' : ''}
+                  />
+                  {(searchQuery || youtubeResults.length > 0) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchQuery('')
+                        setYoutubeResults([])
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+                <Button onClick={handleYouTubeSearch} disabled={isSearching}>
+                  {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Search'}
+                </Button>
+              </div>
+
+              {/* YouTube Search Results */}
+              {youtubeResults.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  {youtubeResults.map((video) => {
+                    const blockReason = getYouTubeBlockReason(video)
+                    const isBlocked = blockReason !== null
+
+                    return (
+                      <div
+                        key={video.id}
+                        className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
+                          isBlocked
+                            ? 'bg-muted/30 opacity-60'
+                            : 'bg-muted/50 hover:bg-muted'
+                        }`}
+                      >
+                        <a
+                          href={`https://www.youtube.com/watch?v=${video.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-3 min-w-0 hover:opacity-80 transition-opacity"
+                        >
+                          {video.thumbnailUrl && (
+                            <img
+                              src={video.thumbnailUrl}
+                              alt={video.title}
+                              className="w-16 h-12 object-cover rounded flex-shrink-0"
+                            />
+                          )}
+                          <div className="min-w-0">
+                            <p className="font-medium">{video.title}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {video.channelTitle}
+                            </p>
+                          </div>
+                        </a>
+                        <div className="ml-auto flex-shrink-0">
+                          {isBlocked ? (
+                            <div
+                              className="relative group"
+                              title={blockReason}
+                            >
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                disabled
+                                className="text-muted-foreground cursor-not-allowed"
+                              >
+                                <Ban className="h-4 w-4" />
+                              </Button>
+                              <div className="absolute right-0 bottom-full mb-2 hidden group-hover:block w-48 p-2 text-xs bg-popover text-popover-foreground rounded-md shadow-md border z-10">
+                                {blockReason}
+                              </div>
+                            </div>
+                          ) : (
+                            <Button
+                              size="sm"
+                              onClick={() => submitYouTubeMutation.mutate(video)}
+                              disabled={submitYouTubeMutation.isPending}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
         ) : (
@@ -774,7 +936,7 @@ export function SessionPage() {
                     className="flex items-center gap-3 p-3 rounded-lg bg-yellow-50 border border-yellow-200"
                   >
                     <a
-                      href={`https://open.spotify.com/track/${request.spotifyTrackId}`}
+                      href={getExternalLink(request)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-3 min-w-0 hover:opacity-80 transition-opacity"
@@ -849,7 +1011,7 @@ export function SessionPage() {
                     }`}
                   >
                     <a
-                      href={`https://open.spotify.com/track/${request.spotifyTrackId}`}
+                      href={getExternalLink(request)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-3 min-w-0 hover:opacity-80 transition-opacity"
