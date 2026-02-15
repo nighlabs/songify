@@ -11,9 +11,9 @@ import (
 )
 
 const createSession = `-- name: CreateSession :one
-INSERT INTO sessions (id, display_name, admin_name, admin_password_hash, friend_access_key, spotify_playlist_id, song_duration_limit_ms)
-VALUES (?, ?, ?, ?, ?, ?, ?)
-RETURNING id, display_name, admin_name, admin_password_hash, friend_access_key, spotify_playlist_id, song_duration_limit_ms, created_at, updated_at, spotify_playlist_name
+INSERT INTO sessions (id, display_name, admin_name, admin_password_hash, friend_access_key, spotify_playlist_id, song_duration_limit_ms, music_service)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING id, display_name, admin_name, admin_password_hash, friend_access_key, spotify_playlist_id, song_duration_limit_ms, created_at, updated_at, spotify_playlist_name, music_service
 `
 
 type CreateSessionParams struct {
@@ -24,6 +24,7 @@ type CreateSessionParams struct {
 	FriendAccessKey     string         `json:"friend_access_key"`
 	SpotifyPlaylistID   sql.NullString `json:"spotify_playlist_id"`
 	SongDurationLimitMs sql.NullInt64  `json:"song_duration_limit_ms"`
+	MusicService        string         `json:"music_service"`
 }
 
 func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (Session, error) {
@@ -35,6 +36,7 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (S
 		arg.FriendAccessKey,
 		arg.SpotifyPlaylistID,
 		arg.SongDurationLimitMs,
+		arg.MusicService,
 	)
 	var i Session
 	err := row.Scan(
@@ -48,6 +50,7 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (S
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.SpotifyPlaylistName,
+		&i.MusicService,
 	)
 	return i, err
 }
@@ -73,7 +76,7 @@ func (q *Queries) FriendKeyExists(ctx context.Context, friendAccessKey string) (
 }
 
 const getSessionByAdminCredentials = `-- name: GetSessionByAdminCredentials :one
-SELECT id, display_name, admin_name, admin_password_hash, friend_access_key, spotify_playlist_id, song_duration_limit_ms, created_at, updated_at, spotify_playlist_name FROM sessions WHERE admin_name = ? AND admin_password_hash = ?
+SELECT id, display_name, admin_name, admin_password_hash, friend_access_key, spotify_playlist_id, song_duration_limit_ms, created_at, updated_at, spotify_playlist_name, music_service FROM sessions WHERE admin_name = ? AND admin_password_hash = ?
 `
 
 type GetSessionByAdminCredentialsParams struct {
@@ -95,12 +98,13 @@ func (q *Queries) GetSessionByAdminCredentials(ctx context.Context, arg GetSessi
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.SpotifyPlaylistName,
+		&i.MusicService,
 	)
 	return i, err
 }
 
 const getSessionByFriendKey = `-- name: GetSessionByFriendKey :one
-SELECT id, display_name, admin_name, admin_password_hash, friend_access_key, spotify_playlist_id, song_duration_limit_ms, created_at, updated_at, spotify_playlist_name FROM sessions WHERE friend_access_key = ?
+SELECT id, display_name, admin_name, admin_password_hash, friend_access_key, spotify_playlist_id, song_duration_limit_ms, created_at, updated_at, spotify_playlist_name, music_service FROM sessions WHERE friend_access_key = ?
 `
 
 func (q *Queries) GetSessionByFriendKey(ctx context.Context, friendAccessKey string) (Session, error) {
@@ -117,12 +121,13 @@ func (q *Queries) GetSessionByFriendKey(ctx context.Context, friendAccessKey str
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.SpotifyPlaylistName,
+		&i.MusicService,
 	)
 	return i, err
 }
 
 const getSessionByID = `-- name: GetSessionByID :one
-SELECT id, display_name, admin_name, admin_password_hash, friend_access_key, spotify_playlist_id, song_duration_limit_ms, created_at, updated_at, spotify_playlist_name FROM sessions WHERE id = ?
+SELECT id, display_name, admin_name, admin_password_hash, friend_access_key, spotify_playlist_id, song_duration_limit_ms, created_at, updated_at, spotify_playlist_name, music_service FROM sessions WHERE id = ?
 `
 
 func (q *Queries) GetSessionByID(ctx context.Context, id string) (Session, error) {
@@ -139,12 +144,13 @@ func (q *Queries) GetSessionByID(ctx context.Context, id string) (Session, error
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.SpotifyPlaylistName,
+		&i.MusicService,
 	)
 	return i, err
 }
 
 const listAllSessions = `-- name: ListAllSessions :many
-SELECT id, display_name, admin_name, admin_password_hash, friend_access_key, spotify_playlist_id, song_duration_limit_ms, created_at, updated_at, spotify_playlist_name FROM sessions
+SELECT id, display_name, admin_name, admin_password_hash, friend_access_key, spotify_playlist_id, song_duration_limit_ms, created_at, updated_at, spotify_playlist_name, music_service FROM sessions
 `
 
 func (q *Queries) ListAllSessions(ctx context.Context) ([]Session, error) {
@@ -167,6 +173,7 @@ func (q *Queries) ListAllSessions(ctx context.Context) ([]Session, error) {
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.SpotifyPlaylistName,
+			&i.MusicService,
 		); err != nil {
 			return nil, err
 		}

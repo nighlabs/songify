@@ -26,6 +26,7 @@ type Session struct {
 	CreatedAt           sql.NullTime   `json:"created_at"`
 	UpdatedAt           sql.NullTime   `json:"updated_at"`
 	SpotifyPlaylistName sql.NullString `json:"spotify_playlist_name"`
+	MusicService        string         `json:"music_service"`
 }
 
 type SongRequest struct {

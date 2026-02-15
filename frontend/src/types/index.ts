@@ -21,6 +21,7 @@ export interface Session {
   id: string
   displayName: string           // Display name for the session (e.g., "Friday Night Party")
   adminName: string             // Name of the session admin/host
+  musicService: 'spotify' | 'youtube'  // Which music service this session uses
   friendAccessKey?: string      // BIP39-style mnemonic for friends to join (admin only)
   spotifyPlaylistId?: string    // Linked Spotify playlist ID
   spotifyPlaylistName?: string  // Linked Spotify playlist name for display
@@ -83,6 +84,7 @@ export interface CreateSessionRequest {
   displayName: string
   adminName: string
   adminPasswordHash: string     // Scrypt hash of admin password
+  musicService?: 'spotify' | 'youtube'
   spotifyPlaylistId?: string
   songDurationLimitMs?: number
   prohibitedArtists?: string[]

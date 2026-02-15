@@ -21,6 +21,7 @@ type CreateSessionRequest struct {
 	DisplayName        string   `json:"displayName"`
 	AdminName          string   `json:"adminName"`
 	AdminPasswordHash  string   `json:"adminPasswordHash"`
+	MusicService       string   `json:"musicService,omitempty"`
 	SpotifyPlaylistID  *string  `json:"spotifyPlaylistId,omitempty"`
 	SongDurationLimitMs *int64  `json:"songDurationLimitMs,omitempty"`
 	ProhibitedArtists  []string `json:"prohibitedArtists,omitempty"`
@@ -70,6 +71,7 @@ type SessionResponse struct {
 	ID                  string                      `json:"id"`
 	DisplayName         string                      `json:"displayName"`
 	AdminName           string                      `json:"adminName"`
+	MusicService        string                      `json:"musicService"`
 	FriendAccessKey     string                      `json:"friendAccessKey,omitempty"`
 	SpotifyPlaylistID   *string                     `json:"spotifyPlaylistId,omitempty"`
 	SpotifyPlaylistName *string                     `json:"spotifyPlaylistName,omitempty"`
