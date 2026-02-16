@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 )
 
 const createProhibitedPattern = `-- name: CreateProhibitedPattern :one
@@ -40,6 +41,19 @@ DELETE FROM prohibited_patterns WHERE id = ?
 func (q *Queries) DeleteProhibitedPattern(ctx context.Context, id int64) error {
 	_, err := q.db.ExecContext(ctx, deleteProhibitedPattern, id)
 	return err
+}
+
+const deleteProhibitedPatternBySession = `-- name: DeleteProhibitedPatternBySession :execresult
+DELETE FROM prohibited_patterns WHERE id = ? AND session_id = ?
+`
+
+type DeleteProhibitedPatternBySessionParams struct {
+	ID        int64  `json:"id"`
+	SessionID string `json:"session_id"`
+}
+
+func (q *Queries) DeleteProhibitedPatternBySession(ctx context.Context, arg DeleteProhibitedPatternBySessionParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, deleteProhibitedPatternBySession, arg.ID, arg.SessionID)
 }
 
 const deleteProhibitedPatternsBySessionID = `-- name: DeleteProhibitedPatternsBySessionID :exec

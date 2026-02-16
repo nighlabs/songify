@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -18,14 +19,16 @@ import (
 
 // mockQueries implements the database operations needed for testing
 type mockQueries struct {
-	patterns            []db.ProhibitedPattern
-	updateSettingsErr   error
-	getPatternErr       error
-	createPatternErr    error
-	deletePatternErr    error
-	createdPattern      db.ProhibitedPattern
-	deletedPatternID    int64
-	updatedDurationMs   *int64
+	patterns                 []db.ProhibitedPattern
+	updateSettingsErr        error
+	getPatternErr            error
+	createPatternErr         error
+	deletePatternErr         error
+	deletePatternRowsAffected int64
+	createdPattern           db.ProhibitedPattern
+	deletedPatternID         int64
+	deletedPatternSessionID  string
+	updatedDurationMs        *int64
 }
 
 func (m *mockQueries) GetProhibitedPatternsBySessionID(ctx context.Context, sessionID string) ([]db.ProhibitedPattern, error) {
@@ -48,13 +51,22 @@ func (m *mockQueries) CreateProhibitedPattern(ctx context.Context, arg db.Create
 	return m.createdPattern, nil
 }
 
-func (m *mockQueries) DeleteProhibitedPattern(ctx context.Context, id int64) error {
+func (m *mockQueries) DeleteProhibitedPatternBySession(ctx context.Context, arg db.DeleteProhibitedPatternBySessionParams) (sql.Result, error) {
 	if m.deletePatternErr != nil {
-		return m.deletePatternErr
+		return nil, m.deletePatternErr
 	}
-	m.deletedPatternID = id
-	return nil
+	m.deletedPatternID = arg.ID
+	m.deletedPatternSessionID = arg.SessionID
+	return mockResult{rowsAffected: m.deletePatternRowsAffected}, nil
 }
+
+// mockResult implements sql.Result for testing.
+type mockResult struct {
+	rowsAffected int64
+}
+
+func (r mockResult) LastInsertId() (int64, error) { return 0, nil }
+func (r mockResult) RowsAffected() (int64, error) { return r.rowsAffected, nil }
 
 func (m *mockQueries) UpdateSessionSettings(ctx context.Context, arg db.UpdateSessionSettingsParams) error {
 	if m.updateSettingsErr != nil {
@@ -73,7 +85,7 @@ func (m *mockQueries) UpdateSessionSettings(ctx context.Context, arg db.UpdateSe
 type sessionQueriesInterface interface {
 	GetProhibitedPatternsBySessionID(ctx context.Context, sessionID string) ([]db.ProhibitedPattern, error)
 	CreateProhibitedPattern(ctx context.Context, arg db.CreateProhibitedPatternParams) (db.ProhibitedPattern, error)
-	DeleteProhibitedPattern(ctx context.Context, id int64) error
+	DeleteProhibitedPatternBySession(ctx context.Context, arg db.DeleteProhibitedPatternBySessionParams) (sql.Result, error)
 	UpdateSessionSettings(ctx context.Context, arg db.UpdateSessionSettingsParams) error
 }
 
@@ -383,6 +395,7 @@ func TestDeleteProhibitedPattern(t *testing.T) {
 		claimSessionID string
 		role           services.Role
 		deleteErr      error
+		rowsAffected   int64
 		expectedStatus int
 	}{
 		{
@@ -391,7 +404,17 @@ func TestDeleteProhibitedPattern(t *testing.T) {
 			patternID:      "1",
 			claimSessionID: "session-123",
 			role:           services.RoleAdmin,
+			rowsAffected:   1,
 			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "pattern not found (wrong session)",
+			sessionID:      "session-123",
+			patternID:      "1",
+			claimSessionID: "session-123",
+			role:           services.RoleAdmin,
+			rowsAffected:   0,
+			expectedStatus: http.StatusNotFound,
 		},
 		{
 			name:           "invalid pattern ID",
@@ -421,7 +444,7 @@ func TestDeleteProhibitedPattern(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mock := &mockQueries{deletePatternErr: tt.deleteErr}
+			mock := &mockQueries{deletePatternErr: tt.deleteErr, deletePatternRowsAffected: tt.rowsAffected}
 
 			req := createTestRequest(
 				http.MethodDelete,
@@ -590,8 +613,22 @@ func createDeleteProhibitedPatternHandler(mock *mockQueries) http.HandlerFunc {
 			return
 		}
 
-		if err := mock.DeleteProhibitedPattern(r.Context(), patternID); err != nil {
+		result, err := mock.DeleteProhibitedPatternBySession(r.Context(), db.DeleteProhibitedPatternBySessionParams{
+			ID:        patternID,
+			SessionID: sessionID,
+		})
+		if err != nil {
 			writeError(w, http.StatusInternalServerError, "failed to delete pattern")
+			return
+		}
+
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to check deletion result")
+			return
+		}
+		if rowsAffected == 0 {
+			writeError(w, http.StatusNotFound, "pattern not found")
 			return
 		}
 

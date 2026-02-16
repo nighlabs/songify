@@ -37,6 +37,14 @@ func New(cfg *config.Config, queries *db.Queries, eventBroker *broker.Broker) ht
 	r.Use(middleware.RequestContextMiddleware)
 	r.Use(middleware.CORSMiddleware(cfg.CORSAllowedOrigins))
 
+	// Global request body size limit (1 MB)
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+			next.ServeHTTP(w, r)
+		})
+	})
+
 	// Services
 	authService := services.NewAuthService(cfg.JWTSecret, cfg.AdminTokenDuration, cfg.FriendTokenDuration)
 	friendKeyService := services.NewFriendKeyService(queries)
@@ -50,14 +58,15 @@ func New(cfg *config.Config, queries *db.Queries, eventBroker *broker.Broker) ht
 	adminHandler := handlers.NewAdminHandler(cfg)
 	configHandler := handlers.NewConfigHandler(cfg)
 	sentryTunnelHandler := handlers.NewSentryTunnelHandler(cfg)
-	sessionHandler := handlers.NewSessionHandler(queries, authService, friendKeyService)
+	sessionHandler := handlers.NewSessionHandler(queries, authService, friendKeyService, cfg)
 	requestHandler := handlers.NewRequestHandler(queries, eventBroker, loungeManager)
 	sseHandler := handlers.NewSSEHandler(eventBroker)
 	spotifyHandler := handlers.NewSpotifyHandler(spotifyService, queries)
 	youtubeHandler := handlers.NewYouTubeHandler(youtubeService, loungeManager, queries)
 
-	// Rate limiter for search
+	// Rate limiters
 	searchRateLimiter := middleware.NewRateLimiter(cfg.RateLimitPerMinute)
+	authRateLimiter := middleware.NewRateLimiter(cfg.AuthRateLimitPerMinute)
 
 	// Routes
 	r.Route("/api", func(r chi.Router) {
@@ -73,19 +82,19 @@ func New(cfg *config.Config, queries *db.Queries, eventBroker *broker.Broker) ht
 		// Sentry tunnel (proxies browser events to avoid CORS)
 		r.Post("/sentry-tunnel", sentryTunnelHandler.Tunnel)
 
-		// Admin portal verification (no auth required)
-		r.Post("/admin/verify", adminHandler.VerifyPassword)
+		// Admin portal verification (no auth required, rate limited)
+		r.With(authRateLimiter.Middleware).Post("/admin/verify", adminHandler.VerifyPassword)
 
 		// Session management
 		r.Route("/sessions", func(r chi.Router) {
-			// Create session (requires admin portal verification - done client-side)
-			r.Post("/", sessionHandler.Create)
+			// Create session (rate limited)
+			r.With(authRateLimiter.Middleware).Post("/", sessionHandler.Create)
 
-			// Join session with friend key (no auth)
-			r.Post("/join", sessionHandler.Join)
+			// Join session with friend key (rate limited)
+			r.With(authRateLimiter.Middleware).Post("/join", sessionHandler.Join)
 
-			// Rejoin as admin (no auth)
-			r.Post("/rejoin", sessionHandler.Rejoin)
+			// Rejoin as admin (rate limited)
+			r.With(authRateLimiter.Middleware).Post("/rejoin", sessionHandler.Rejoin)
 
 			// SSE stream for real-time request updates (uses query param auth)
 			r.With(

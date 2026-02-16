@@ -18,14 +18,15 @@ type VerifyAdminResponse struct {
 // CreateSessionRequest contains all parameters needed to create a new session.
 // Admins can optionally configure duration limits and prohibited patterns upfront.
 type CreateSessionRequest struct {
-	DisplayName        string   `json:"displayName"`
-	AdminName          string   `json:"adminName"`
-	AdminPasswordHash  string   `json:"adminPasswordHash"`
-	MusicService       string   `json:"musicService,omitempty"`
-	SpotifyPlaylistID  *string  `json:"spotifyPlaylistId,omitempty"`
-	SongDurationLimitMs *int64  `json:"songDurationLimitMs,omitempty"`
-	ProhibitedArtists  []string `json:"prohibitedArtists,omitempty"`
-	ProhibitedTitles   []string `json:"prohibitedTitles,omitempty"`
+	DisplayName              string   `json:"displayName"`
+	AdminName                string   `json:"adminName"`
+	AdminPasswordHash        string   `json:"adminPasswordHash"`
+	AdminPortalPasswordHash  string   `json:"adminPortalPasswordHash"`
+	MusicService             string   `json:"musicService,omitempty"`
+	SpotifyPlaylistID        *string  `json:"spotifyPlaylistId,omitempty"`
+	SongDurationLimitMs      *int64   `json:"songDurationLimitMs,omitempty"`
+	ProhibitedArtists        []string `json:"prohibitedArtists,omitempty"`
+	ProhibitedTitles         []string `json:"prohibitedTitles,omitempty"`
 }
 
 // CreateSessionResponse returns the session ID, friend access key (for sharing),

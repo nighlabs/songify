@@ -3,12 +3,16 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+
+	"github.com/songify/backend/internal/config"
 	"github.com/songify/backend/internal/crypto"
 	"github.com/songify/backend/internal/db"
 	"github.com/songify/backend/internal/logging"
@@ -22,14 +26,16 @@ type SessionHandler struct {
 	queries          *db.Queries
 	authService      *services.AuthService
 	friendKeyService *services.FriendKeyService
+	cfg              *config.Config
 }
 
 // NewSessionHandler creates a SessionHandler with the required dependencies.
-func NewSessionHandler(queries *db.Queries, authService *services.AuthService, friendKeyService *services.FriendKeyService) *SessionHandler {
+func NewSessionHandler(queries *db.Queries, authService *services.AuthService, friendKeyService *services.FriendKeyService, cfg *config.Config) *SessionHandler {
 	return &SessionHandler{
 		queries:          queries,
 		authService:      authService,
 		friendKeyService: friendKeyService,
+		cfg:              cfg,
 	}
 }
 
@@ -52,6 +58,19 @@ func (h *SessionHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.MusicService != "spotify" && req.MusicService != "youtube" {
 		writeError(w, http.StatusBadRequest, "musicService must be 'spotify' or 'youtube'")
+		return
+	}
+
+	// Verify admin portal password
+	utcDay := strconv.Itoa(time.Now().UTC().Day())
+	expectedPortalHash, err := crypto.HashWithScrypt(h.cfg.AdminPortalPassword, utcDay)
+	if err != nil {
+		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to hash admin portal password", err)
+		return
+	}
+	if req.AdminPortalPasswordHash != expectedPortalHash {
+		logging.LogSecurityEvent(r.Context(), logging.SecurityEventBadAdminPassword, "invalid admin portal password on session creation")
+		writeError(w, http.StatusUnauthorized, "invalid admin portal password")
 		return
 	}
 
@@ -143,7 +162,12 @@ func (h *SessionHandler) Join(w http.ResponseWriter, r *http.Request) {
 
 	var matchedSession *db.Session
 	for i := range sessions {
-		if crypto.HashFriendKey(sessions[i].FriendAccessKey) == req.FriendKeyHash {
+		hash, err := crypto.HashFriendKey(sessions[i].FriendAccessKey)
+		if err != nil {
+			slog.Error("failed to hash friend key", slog.String("error", err.Error()))
+			continue
+		}
+		if hash == req.FriendKeyHash {
 			matchedSession = &sessions[i]
 			break
 		}
@@ -203,7 +227,12 @@ func (h *SessionHandler) Rejoin(w http.ResponseWriter, r *http.Request) {
 
 	var matchedSession *db.Session
 	for i := range allSessions {
-		if crypto.HashFriendKey(allSessions[i].FriendAccessKey) == req.FriendKeyHash {
+		hash, err := crypto.HashFriendKey(allSessions[i].FriendAccessKey)
+		if err != nil {
+			slog.Error("failed to hash friend key", slog.String("error", err.Error()))
+			continue
+		}
+		if hash == req.FriendKeyHash {
 			matchedSession = &allSessions[i]
 			break
 		}
@@ -434,8 +463,22 @@ func (h *SessionHandler) DeleteProhibitedPattern(w http.ResponseWriter, r *http.
 		return
 	}
 
-	if err := h.queries.DeleteProhibitedPattern(r.Context(), patternID); err != nil {
+	result, err := h.queries.DeleteProhibitedPatternBySession(r.Context(), db.DeleteProhibitedPatternBySessionParams{
+		ID:        patternID,
+		SessionID: sessionID,
+	})
+	if err != nil {
 		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to delete pattern", err)
+		return
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to check deletion result", err)
+		return
+	}
+	if rowsAffected == 0 {
+		writeError(w, http.StatusNotFound, "pattern not found")
 		return
 	}
 
