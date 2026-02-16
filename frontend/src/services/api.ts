@@ -99,10 +99,10 @@ export const api = {
   },
 
   /** Join a session as a friend using the hashed access key */
-  joinSession: async (friendKeyHash: string): Promise<JoinSessionResponse> => {
+  joinSession: async (friendKeyHash: string, displayName?: string): Promise<JoinSessionResponse> => {
     return request('/sessions/join', {
       method: 'POST',
-      body: JSON.stringify({ friendKeyHash }),
+      body: JSON.stringify({ friendKeyHash, displayName }),
     })
   },
 

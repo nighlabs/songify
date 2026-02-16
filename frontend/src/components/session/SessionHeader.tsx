@@ -17,7 +17,7 @@ export function SessionHeader({
 }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { isAdmin, friendAccessKey, logout } = useAuthStore()
+  const { isAdmin, identity, friendAccessKey, logout } = useAuthStore()
   const [copiedKey, setCopiedKey] = useState(false)
 
   const handleCopyKey = () => {
@@ -61,6 +61,9 @@ export function SessionHeader({
                 session={session}
                 onSessionUpdate={() => queryClient.invalidateQueries({ queryKey: ['session', session.id] })}
               />
+            )}
+            {!isAdmin && identity && (
+              <span className="text-sm text-muted-foreground hidden sm:inline">{identity}</span>
             )}
             <Button variant="ghost" size="icon" onClick={handleLogout}>
               <LogOut className="h-4 w-4" />
