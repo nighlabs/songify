@@ -6,19 +6,23 @@ package db
 
 import (
 	"context"
+	"database/sql"
 )
 
 type Querier interface {
 	ApproveSongRequest(ctx context.Context, id int64) error
+	ClearLoungeCredentials(ctx context.Context, id string) error
 	CreateProhibitedPattern(ctx context.Context, arg CreateProhibitedPatternParams) (ProhibitedPattern, error)
 	CreateSession(ctx context.Context, arg CreateSessionParams) (Session, error)
 	CreateSongRequest(ctx context.Context, arg CreateSongRequestParams) (SongRequest, error)
 	DeleteAllSongRequestsBySessionID(ctx context.Context, sessionID string) error
 	DeleteProhibitedPattern(ctx context.Context, id int64) error
+	DeleteProhibitedPatternBySession(ctx context.Context, arg DeleteProhibitedPatternBySessionParams) (sql.Result, error)
 	DeleteProhibitedPatternsBySessionID(ctx context.Context, sessionID string) error
 	DeleteSession(ctx context.Context, id string) error
 	DeleteSongRequest(ctx context.Context, id int64) error
 	FriendKeyExists(ctx context.Context, friendAccessKey string) (int64, error)
+	GetLoungeCredentials(ctx context.Context, id string) (GetLoungeCredentialsRow, error)
 	GetPendingSongRequests(ctx context.Context, sessionID string) ([]SongRequest, error)
 	GetProhibitedPatternsBySessionID(ctx context.Context, sessionID string) ([]ProhibitedPattern, error)
 	GetSessionByAdminCredentials(ctx context.Context, arg GetSessionByAdminCredentialsParams) (Session, error)
@@ -29,6 +33,7 @@ type Querier interface {
 	IsDuplicateRequest(ctx context.Context, arg IsDuplicateRequestParams) (int64, error)
 	ListAllSessions(ctx context.Context) ([]Session, error)
 	RejectSongRequest(ctx context.Context, arg RejectSongRequestParams) error
+	SaveLoungeCredentials(ctx context.Context, arg SaveLoungeCredentialsParams) error
 	UpdateSessionPlaylist(ctx context.Context, arg UpdateSessionPlaylistParams) error
 	UpdateSessionSettings(ctx context.Context, arg UpdateSessionSettingsParams) error
 }

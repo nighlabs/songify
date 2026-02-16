@@ -3,11 +3,16 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+
+	"github.com/songify/backend/internal/config"
 	"github.com/songify/backend/internal/crypto"
 	"github.com/songify/backend/internal/db"
 	"github.com/songify/backend/internal/logging"
@@ -21,14 +26,16 @@ type SessionHandler struct {
 	queries          *db.Queries
 	authService      *services.AuthService
 	friendKeyService *services.FriendKeyService
+	cfg              *config.Config
 }
 
 // NewSessionHandler creates a SessionHandler with the required dependencies.
-func NewSessionHandler(queries *db.Queries, authService *services.AuthService, friendKeyService *services.FriendKeyService) *SessionHandler {
+func NewSessionHandler(queries *db.Queries, authService *services.AuthService, friendKeyService *services.FriendKeyService, cfg *config.Config) *SessionHandler {
 	return &SessionHandler{
 		queries:          queries,
 		authService:      authService,
 		friendKeyService: friendKeyService,
+		cfg:              cfg,
 	}
 }
 
@@ -43,6 +50,27 @@ func (h *SessionHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	if req.DisplayName == "" || req.AdminName == "" || req.AdminPasswordHash == "" {
 		writeError(w, http.StatusBadRequest, "displayName, adminName, and adminPasswordHash are required")
+		return
+	}
+
+	if req.MusicService == "" {
+		req.MusicService = "spotify"
+	}
+	if req.MusicService != "spotify" && req.MusicService != "youtube" {
+		writeError(w, http.StatusBadRequest, "musicService must be 'spotify' or 'youtube'")
+		return
+	}
+
+	// Verify admin portal password
+	utcDay := strconv.Itoa(time.Now().UTC().Day())
+	expectedPortalHash, err := crypto.HashWithScrypt(h.cfg.AdminPortalPassword, utcDay)
+	if err != nil {
+		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to hash admin portal password", err)
+		return
+	}
+	if req.AdminPortalPasswordHash != expectedPortalHash {
+		logging.LogSecurityEvent(r.Context(), logging.SecurityEventBadAdminPassword, "invalid admin portal password on session creation")
+		writeError(w, http.StatusUnauthorized, "invalid admin portal password")
 		return
 	}
 
@@ -71,6 +99,7 @@ func (h *SessionHandler) Create(w http.ResponseWriter, r *http.Request) {
 		FriendAccessKey:     friendKey,
 		SpotifyPlaylistID:   playlistID,
 		SongDurationLimitMs: durationLimit,
+		MusicService:        req.MusicService,
 	})
 	if err != nil {
 		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to create session", err)
@@ -133,7 +162,12 @@ func (h *SessionHandler) Join(w http.ResponseWriter, r *http.Request) {
 
 	var matchedSession *db.Session
 	for i := range sessions {
-		if crypto.HashFriendKey(sessions[i].FriendAccessKey) == req.FriendKeyHash {
+		hash, err := crypto.HashFriendKey(sessions[i].FriendAccessKey)
+		if err != nil {
+			slog.Error("failed to hash friend key", slog.String("error", err.Error()))
+			continue
+		}
+		if hash == req.FriendKeyHash {
 			matchedSession = &sessions[i]
 			break
 		}
@@ -145,7 +179,17 @@ func (h *SessionHandler) Join(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	identity := h.friendKeyService.GenerateName()
+	generatedName := h.friendKeyService.GenerateName()
+	displayName := strings.TrimSpace(req.DisplayName)
+	var identity string
+	if displayName != "" {
+		if len(displayName) > 20 {
+			displayName = displayName[:20]
+		}
+		identity = displayName + " [" + generatedName + "]"
+	} else {
+		identity = generatedName
+	}
 	token, err := h.authService.GenerateToken(matchedSession.ID, services.RoleFriend, identity)
 	if err != nil {
 		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to generate token", err)
@@ -155,6 +199,7 @@ func (h *SessionHandler) Join(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, models.JoinSessionResponse{
 		SessionID:   matchedSession.ID,
 		DisplayName: matchedSession.DisplayName,
+		Identity:    identity,
 		Token:       token,
 	})
 }
@@ -182,7 +227,12 @@ func (h *SessionHandler) Rejoin(w http.ResponseWriter, r *http.Request) {
 
 	var matchedSession *db.Session
 	for i := range allSessions {
-		if crypto.HashFriendKey(allSessions[i].FriendAccessKey) == req.FriendKeyHash {
+		hash, err := crypto.HashFriendKey(allSessions[i].FriendAccessKey)
+		if err != nil {
+			slog.Error("failed to hash friend key", slog.String("error", err.Error()))
+			continue
+		}
+		if hash == req.FriendKeyHash {
 			matchedSession = &allSessions[i]
 			break
 		}
@@ -234,11 +284,12 @@ func (h *SessionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	isAdmin := claims.Role == services.RoleAdmin
 
 	resp := models.SessionResponse{
-		ID:          session.ID,
-		DisplayName: session.DisplayName,
-		AdminName:   session.AdminName,
-		CreatedAt:   session.CreatedAt.Time,
-		IsAdmin:     isAdmin,
+		ID:           session.ID,
+		DisplayName:  session.DisplayName,
+		AdminName:    session.AdminName,
+		MusicService: session.MusicService,
+		CreatedAt:    session.CreatedAt.Time,
+		IsAdmin:      isAdmin,
 	}
 
 	if session.SpotifyPlaylistID.Valid {
@@ -269,45 +320,6 @@ func (h *SessionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, resp)
-}
-
-// UpdatePlaylist sets or updates the Spotify playlist for the session.
-func (h *SessionHandler) UpdatePlaylist(w http.ResponseWriter, r *http.Request) {
-	sessionID := chi.URLParam(r, "id")
-	claims := middleware.GetClaims(r.Context())
-
-	if claims.SessionID != sessionID {
-		writeError(w, http.StatusForbidden, "access denied")
-		return
-	}
-
-	if claims.Role != services.RoleAdmin {
-		writeError(w, http.StatusForbidden, "admin access required")
-		return
-	}
-
-	var req models.UpdatePlaylistRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
-		return
-	}
-
-	if req.SpotifyPlaylistID == "" {
-		writeError(w, http.StatusBadRequest, "spotifyPlaylistId is required")
-		return
-	}
-
-	err := h.queries.UpdateSessionPlaylist(r.Context(), db.UpdateSessionPlaylistParams{
-		ID:                  sessionID,
-		SpotifyPlaylistID:   sql.NullString{String: req.SpotifyPlaylistID, Valid: true},
-		SpotifyPlaylistName: sql.NullString{String: req.SpotifyPlaylistName, Valid: req.SpotifyPlaylistName != ""},
-	})
-	if err != nil {
-		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to update playlist", err)
-		return
-	}
-
-	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 // UpdateDurationLimit sets or clears the maximum allowed song duration.
@@ -451,8 +463,22 @@ func (h *SessionHandler) DeleteProhibitedPattern(w http.ResponseWriter, r *http.
 		return
 	}
 
-	if err := h.queries.DeleteProhibitedPattern(r.Context(), patternID); err != nil {
+	result, err := h.queries.DeleteProhibitedPatternBySession(r.Context(), db.DeleteProhibitedPatternBySessionParams{
+		ID:        patternID,
+		SessionID: sessionID,
+	})
+	if err != nil {
 		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to delete pattern", err)
+		return
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to check deletion result", err)
+		return
+	}
+	if rowsAffected == 0 {
+		writeError(w, http.StatusNotFound, "pattern not found")
 		return
 	}
 

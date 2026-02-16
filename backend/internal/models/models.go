@@ -18,13 +18,15 @@ type VerifyAdminResponse struct {
 // CreateSessionRequest contains all parameters needed to create a new session.
 // Admins can optionally configure duration limits and prohibited patterns upfront.
 type CreateSessionRequest struct {
-	DisplayName        string   `json:"displayName"`
-	AdminName          string   `json:"adminName"`
-	AdminPasswordHash  string   `json:"adminPasswordHash"`
-	SpotifyPlaylistID  *string  `json:"spotifyPlaylistId,omitempty"`
-	SongDurationLimitMs *int64  `json:"songDurationLimitMs,omitempty"`
-	ProhibitedArtists  []string `json:"prohibitedArtists,omitempty"`
-	ProhibitedTitles   []string `json:"prohibitedTitles,omitempty"`
+	DisplayName              string   `json:"displayName"`
+	AdminName                string   `json:"adminName"`
+	AdminPasswordHash        string   `json:"adminPasswordHash"`
+	AdminPortalPasswordHash  string   `json:"adminPortalPasswordHash"`
+	MusicService             string   `json:"musicService,omitempty"`
+	SpotifyPlaylistID        *string  `json:"spotifyPlaylistId,omitempty"`
+	SongDurationLimitMs      *int64   `json:"songDurationLimitMs,omitempty"`
+	ProhibitedArtists        []string `json:"prohibitedArtists,omitempty"`
+	ProhibitedTitles         []string `json:"prohibitedTitles,omitempty"`
 }
 
 // CreateSessionResponse returns the session ID, friend access key (for sharing),
@@ -39,12 +41,14 @@ type CreateSessionResponse struct {
 // shared friend key (hashed client-side).
 type JoinSessionRequest struct {
 	FriendKeyHash string `json:"friendKeyHash"`
+	DisplayName   string `json:"displayName,omitempty"`
 }
 
 // JoinSessionResponse returns session info and a JWT token for the friend.
 type JoinSessionResponse struct {
 	SessionID   string `json:"sessionId"`
 	DisplayName string `json:"displayName"`
+	Identity    string `json:"identity"`
 	Token       string `json:"token"`
 }
 
@@ -70,6 +74,7 @@ type SessionResponse struct {
 	ID                  string                      `json:"id"`
 	DisplayName         string                      `json:"displayName"`
 	AdminName           string                      `json:"adminName"`
+	MusicService        string                      `json:"musicService"`
 	FriendAccessKey     string                      `json:"friendAccessKey,omitempty"`
 	SpotifyPlaylistID   *string                     `json:"spotifyPlaylistId,omitempty"`
 	SpotifyPlaylistName *string                     `json:"spotifyPlaylistName,omitempty"`
@@ -79,29 +84,29 @@ type SessionResponse struct {
 	IsAdmin             bool                        `json:"isAdmin"`
 }
 
-// SubmitSongRequestRequest contains the Spotify track metadata for a song request.
-// All fields come from the Spotify API search results.
+// SubmitSongRequestRequest contains the track metadata for a song request.
+// Fields come from Spotify or YouTube search results.
 type SubmitSongRequestRequest struct {
-	SpotifyTrackID string `json:"spotifyTrackId"`
-	TrackName      string `json:"trackName"`
-	ArtistNames    string `json:"artistNames"`
-	AlbumName      string `json:"albumName"`
-	AlbumArtURL    string `json:"albumArtUrl,omitempty"`
-	DurationMS     int64  `json:"durationMs"`
-	SpotifyURI     string `json:"spotifyUri"`
+	ExternalTrackID string `json:"externalTrackId"`
+	TrackName       string `json:"trackName"`
+	ArtistNames     string `json:"artistNames"`
+	AlbumName       string `json:"albumName"`
+	AlbumArtURL     string `json:"albumArtUrl,omitempty"`
+	DurationMS      int64  `json:"durationMs"`
+	ExternalURI     string `json:"externalUri"`
 }
 
 // SongRequestResponse represents a song request with its current status.
 // Status is one of: "pending", "approved", "rejected".
 type SongRequestResponse struct {
 	ID              int64      `json:"id"`
-	SpotifyTrackID  string     `json:"spotifyTrackId"`
+	ExternalTrackID string     `json:"externalTrackId"`
 	TrackName       string     `json:"trackName"`
 	ArtistNames     string     `json:"artistNames"`
 	AlbumName       string     `json:"albumName"`
 	AlbumArtURL     *string    `json:"albumArtUrl,omitempty"`
 	DurationMS      int64      `json:"durationMs"`
-	SpotifyURI      string     `json:"spotifyUri"`
+	ExternalURI     string     `json:"externalUri"`
 	Status          string     `json:"status"`
 	RequestedAt     time.Time  `json:"requestedAt"`
 	ProcessedAt     *time.Time `json:"processedAt,omitempty"`
@@ -154,6 +159,33 @@ type ProhibitedPatternResponse struct {
 	ID          int64  `json:"id"`
 	PatternType string `json:"patternType"`
 	Pattern     string `json:"pattern"`
+}
+
+// YouTubeSearchResponse wraps the video results from a YouTube search.
+type YouTubeSearchResponse struct {
+	Videos []YouTubeVideoResponse `json:"videos"`
+}
+
+// YouTubeVideoResponse contains video metadata from YouTube's API,
+// formatted for the frontend to display and submit as a request.
+type YouTubeVideoResponse struct {
+	ID           string `json:"id"`
+	Title        string `json:"title"`
+	ChannelTitle string `json:"channelTitle"`
+	ThumbnailURL string `json:"thumbnailUrl"`
+	DurationMS   int64  `json:"durationMs"`
+}
+
+// PairLoungeRequest is sent by an admin to pair with a YouTube TV via Lounge API.
+type PairLoungeRequest struct {
+	PairingCode string `json:"pairingCode"`
+}
+
+// LoungeStatusResponse represents the current YouTube TV connection state.
+type LoungeStatusResponse struct {
+	Status     string  `json:"status"`              // connected/disconnected/error/connecting
+	ScreenName *string `json:"screenName,omitempty"`
+	Error      *string `json:"error,omitempty"`
 }
 
 // ErrorResponse is the standard error format returned by all endpoints.

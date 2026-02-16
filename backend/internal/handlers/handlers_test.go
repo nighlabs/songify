@@ -24,8 +24,14 @@ func TestAdminHandler_VerifyPassword(t *testing.T) {
 	utcDay := strconv.Itoa(time.Now().UTC().Day())
 
 	// Generate the correct hash for the test password
-	correctHash := crypto.HashWithScrypt("test-password", utcDay)
-	wrongHash := crypto.HashWithScrypt("wrong-password", utcDay)
+	correctHash, err := crypto.HashWithScrypt("test-password", utcDay)
+	if err != nil {
+		t.Fatalf("Failed to hash test password: %v", err)
+	}
+	wrongHash, err := crypto.HashWithScrypt("wrong-password", utcDay)
+	if err != nil {
+		t.Fatalf("Failed to hash wrong password: %v", err)
+	}
 
 	tests := []struct {
 		name           string

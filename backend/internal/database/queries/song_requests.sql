@@ -1,5 +1,5 @@
 -- name: CreateSongRequest :one
-INSERT INTO song_requests (session_id, spotify_track_id, track_name, artist_names, album_name, album_art_url, duration_ms, spotify_uri, requester_name)
+INSERT INTO song_requests (session_id, external_track_id, track_name, artist_names, album_name, album_art_url, duration_ms, external_uri, requester_name)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING *;
 
@@ -21,7 +21,7 @@ UPDATE song_requests SET status = 'rejected', processed_at = CURRENT_TIMESTAMP, 
 -- name: IsDuplicateRequest :one
 SELECT EXISTS(
     SELECT 1 FROM song_requests
-    WHERE session_id = ? AND spotify_track_id = ? AND status != 'rejected'
+    WHERE session_id = ? AND external_track_id = ? AND status != 'rejected'
 ) AS is_duplicate;
 
 -- name: DeleteSongRequest :exec

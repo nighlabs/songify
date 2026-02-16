@@ -21,6 +21,7 @@ export interface Session {
   id: string
   displayName: string           // Display name for the session (e.g., "Friday Night Party")
   adminName: string             // Name of the session admin/host
+  musicService: 'spotify' | 'youtube'  // Which music service this session uses
   friendAccessKey?: string      // BIP39-style mnemonic for friends to join (admin only)
   spotifyPlaylistId?: string    // Linked Spotify playlist ID
   spotifyPlaylistName?: string  // Linked Spotify playlist name for display
@@ -36,18 +37,29 @@ export interface Session {
  */
 export interface SongRequest {
   id: number
-  spotifyTrackId: string
+  externalTrackId: string
   trackName: string
   artistNames: string           // Comma-separated list of artist names
   albumName: string
   albumArtUrl?: string
   durationMs: number
-  spotifyUri: string            // Spotify URI for adding to playlist (e.g., "spotify:track:...")
+  externalUri: string           // External URI (Spotify URI or YouTube URL)
   status: 'pending' | 'approved' | 'rejected'
   requestedAt: string
   processedAt?: string
   rejectionReason?: string      // Optional reason provided when rejecting
   requesterName?: string        // Anonymous identity name of requester
+}
+
+/**
+ * A video from YouTube search results.
+ */
+export interface YouTubeVideo {
+  id: string
+  title: string
+  channelTitle: string
+  thumbnailUrl: string
+  durationMs: number
 }
 
 /**
@@ -73,7 +85,17 @@ export interface AuthState {
   sessionId: string | null      // Current session ID
   isAdmin: boolean              // Whether user has admin privileges
   displayName: string | null    // Session display name
+  identity: string | null       // User's display identity (e.g., "Chris [PlusThree43]")
   friendAccessKey: string | null // Friend key (only set for admins)
+}
+
+/**
+ * YouTube TV Lounge connection status.
+ */
+export interface LoungeStatus {
+  status: 'connected' | 'disconnected' | 'error' | 'connecting'
+  screenName?: string
+  error?: string
 }
 
 // ----- API Request/Response Types -----
@@ -82,7 +104,9 @@ export interface AuthState {
 export interface CreateSessionRequest {
   displayName: string
   adminName: string
-  adminPasswordHash: string     // Scrypt hash of admin password
+  adminPasswordHash: string             // Scrypt hash of admin password
+  adminPortalPasswordHash: string       // Scrypt hash of admin portal password (server-side verification)
+  musicService?: 'spotify' | 'youtube'
   spotifyPlaylistId?: string
   songDurationLimitMs?: number
   prohibitedArtists?: string[]
@@ -93,6 +117,7 @@ export interface CreateSessionRequest {
 export interface JoinSessionResponse {
   sessionId: string
   displayName: string
+  identity: string              // User's display identity (e.g., "Chris [PlusThree43]")
   token: string                 // JWT token for the friend
 }
 

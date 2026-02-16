@@ -20,46 +20,46 @@ func (q *Queries) ApproveSongRequest(ctx context.Context, id int64) error {
 }
 
 const createSongRequest = `-- name: CreateSongRequest :one
-INSERT INTO song_requests (session_id, spotify_track_id, track_name, artist_names, album_name, album_art_url, duration_ms, spotify_uri, requester_name)
+INSERT INTO song_requests (session_id, external_track_id, track_name, artist_names, album_name, album_art_url, duration_ms, external_uri, requester_name)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-RETURNING id, session_id, spotify_track_id, track_name, artist_names, album_name, album_art_url, duration_ms, spotify_uri, status, requested_at, processed_at, rejection_reason, requester_name
+RETURNING id, session_id, external_track_id, track_name, artist_names, album_name, album_art_url, duration_ms, external_uri, status, requested_at, processed_at, rejection_reason, requester_name
 `
 
 type CreateSongRequestParams struct {
-	SessionID      string         `json:"session_id"`
-	SpotifyTrackID string         `json:"spotify_track_id"`
-	TrackName      string         `json:"track_name"`
-	ArtistNames    string         `json:"artist_names"`
-	AlbumName      string         `json:"album_name"`
-	AlbumArtUrl    sql.NullString `json:"album_art_url"`
-	DurationMs     int64          `json:"duration_ms"`
-	SpotifyUri     string         `json:"spotify_uri"`
-	RequesterName  sql.NullString `json:"requester_name"`
+	SessionID       string         `json:"session_id"`
+	ExternalTrackID string         `json:"external_track_id"`
+	TrackName       string         `json:"track_name"`
+	ArtistNames     string         `json:"artist_names"`
+	AlbumName       string         `json:"album_name"`
+	AlbumArtUrl     sql.NullString `json:"album_art_url"`
+	DurationMs      int64          `json:"duration_ms"`
+	ExternalUri     string         `json:"external_uri"`
+	RequesterName   sql.NullString `json:"requester_name"`
 }
 
 func (q *Queries) CreateSongRequest(ctx context.Context, arg CreateSongRequestParams) (SongRequest, error) {
 	row := q.db.QueryRowContext(ctx, createSongRequest,
 		arg.SessionID,
-		arg.SpotifyTrackID,
+		arg.ExternalTrackID,
 		arg.TrackName,
 		arg.ArtistNames,
 		arg.AlbumName,
 		arg.AlbumArtUrl,
 		arg.DurationMs,
-		arg.SpotifyUri,
+		arg.ExternalUri,
 		arg.RequesterName,
 	)
 	var i SongRequest
 	err := row.Scan(
 		&i.ID,
 		&i.SessionID,
-		&i.SpotifyTrackID,
+		&i.ExternalTrackID,
 		&i.TrackName,
 		&i.ArtistNames,
 		&i.AlbumName,
 		&i.AlbumArtUrl,
 		&i.DurationMs,
-		&i.SpotifyUri,
+		&i.ExternalUri,
 		&i.Status,
 		&i.RequestedAt,
 		&i.ProcessedAt,
@@ -88,7 +88,7 @@ func (q *Queries) DeleteSongRequest(ctx context.Context, id int64) error {
 }
 
 const getPendingSongRequests = `-- name: GetPendingSongRequests :many
-SELECT id, session_id, spotify_track_id, track_name, artist_names, album_name, album_art_url, duration_ms, spotify_uri, status, requested_at, processed_at, rejection_reason, requester_name FROM song_requests WHERE session_id = ? AND status = 'pending' ORDER BY requested_at ASC
+SELECT id, session_id, external_track_id, track_name, artist_names, album_name, album_art_url, duration_ms, external_uri, status, requested_at, processed_at, rejection_reason, requester_name FROM song_requests WHERE session_id = ? AND status = 'pending' ORDER BY requested_at ASC
 `
 
 func (q *Queries) GetPendingSongRequests(ctx context.Context, sessionID string) ([]SongRequest, error) {
@@ -103,13 +103,13 @@ func (q *Queries) GetPendingSongRequests(ctx context.Context, sessionID string) 
 		if err := rows.Scan(
 			&i.ID,
 			&i.SessionID,
-			&i.SpotifyTrackID,
+			&i.ExternalTrackID,
 			&i.TrackName,
 			&i.ArtistNames,
 			&i.AlbumName,
 			&i.AlbumArtUrl,
 			&i.DurationMs,
-			&i.SpotifyUri,
+			&i.ExternalUri,
 			&i.Status,
 			&i.RequestedAt,
 			&i.ProcessedAt,
@@ -130,7 +130,7 @@ func (q *Queries) GetPendingSongRequests(ctx context.Context, sessionID string) 
 }
 
 const getSongRequestByID = `-- name: GetSongRequestByID :one
-SELECT id, session_id, spotify_track_id, track_name, artist_names, album_name, album_art_url, duration_ms, spotify_uri, status, requested_at, processed_at, rejection_reason, requester_name FROM song_requests WHERE id = ?
+SELECT id, session_id, external_track_id, track_name, artist_names, album_name, album_art_url, duration_ms, external_uri, status, requested_at, processed_at, rejection_reason, requester_name FROM song_requests WHERE id = ?
 `
 
 func (q *Queries) GetSongRequestByID(ctx context.Context, id int64) (SongRequest, error) {
@@ -139,13 +139,13 @@ func (q *Queries) GetSongRequestByID(ctx context.Context, id int64) (SongRequest
 	err := row.Scan(
 		&i.ID,
 		&i.SessionID,
-		&i.SpotifyTrackID,
+		&i.ExternalTrackID,
 		&i.TrackName,
 		&i.ArtistNames,
 		&i.AlbumName,
 		&i.AlbumArtUrl,
 		&i.DurationMs,
-		&i.SpotifyUri,
+		&i.ExternalUri,
 		&i.Status,
 		&i.RequestedAt,
 		&i.ProcessedAt,
@@ -156,7 +156,7 @@ func (q *Queries) GetSongRequestByID(ctx context.Context, id int64) (SongRequest
 }
 
 const getSongRequestsBySessionID = `-- name: GetSongRequestsBySessionID :many
-SELECT id, session_id, spotify_track_id, track_name, artist_names, album_name, album_art_url, duration_ms, spotify_uri, status, requested_at, processed_at, rejection_reason, requester_name FROM song_requests WHERE session_id = ? ORDER BY requested_at DESC
+SELECT id, session_id, external_track_id, track_name, artist_names, album_name, album_art_url, duration_ms, external_uri, status, requested_at, processed_at, rejection_reason, requester_name FROM song_requests WHERE session_id = ? ORDER BY requested_at DESC
 `
 
 func (q *Queries) GetSongRequestsBySessionID(ctx context.Context, sessionID string) ([]SongRequest, error) {
@@ -171,13 +171,13 @@ func (q *Queries) GetSongRequestsBySessionID(ctx context.Context, sessionID stri
 		if err := rows.Scan(
 			&i.ID,
 			&i.SessionID,
-			&i.SpotifyTrackID,
+			&i.ExternalTrackID,
 			&i.TrackName,
 			&i.ArtistNames,
 			&i.AlbumName,
 			&i.AlbumArtUrl,
 			&i.DurationMs,
-			&i.SpotifyUri,
+			&i.ExternalUri,
 			&i.Status,
 			&i.RequestedAt,
 			&i.ProcessedAt,
@@ -200,17 +200,17 @@ func (q *Queries) GetSongRequestsBySessionID(ctx context.Context, sessionID stri
 const isDuplicateRequest = `-- name: IsDuplicateRequest :one
 SELECT EXISTS(
     SELECT 1 FROM song_requests
-    WHERE session_id = ? AND spotify_track_id = ? AND status != 'rejected'
+    WHERE session_id = ? AND external_track_id = ? AND status != 'rejected'
 ) AS is_duplicate
 `
 
 type IsDuplicateRequestParams struct {
-	SessionID      string `json:"session_id"`
-	SpotifyTrackID string `json:"spotify_track_id"`
+	SessionID       string `json:"session_id"`
+	ExternalTrackID string `json:"external_track_id"`
 }
 
 func (q *Queries) IsDuplicateRequest(ctx context.Context, arg IsDuplicateRequestParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, isDuplicateRequest, arg.SessionID, arg.SpotifyTrackID)
+	row := q.db.QueryRowContext(ctx, isDuplicateRequest, arg.SessionID, arg.ExternalTrackID)
 	var is_duplicate int64
 	err := row.Scan(&is_duplicate)
 	return is_duplicate, err

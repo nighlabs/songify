@@ -9,6 +9,7 @@ describe('authStore', () => {
       sessionId: null,
       isAdmin: false,
       displayName: null,
+      identity: null,
       friendAccessKey: null,
     })
   })
@@ -36,13 +37,14 @@ describe('authStore', () => {
 
   it('should set friend auth correctly', () => {
     const { setFriendAuth } = useAuthStore.getState()
-    setFriendAuth('friend-token', 'session-456', 'Party Playlist')
+    setFriendAuth('friend-token', 'session-456', 'Party Playlist', 'Chris [HappyTiger42]')
 
     const state = useAuthStore.getState()
     expect(state.token).toBe('friend-token')
     expect(state.sessionId).toBe('session-456')
     expect(state.isAdmin).toBe(false)
     expect(state.displayName).toBe('Party Playlist')
+    expect(state.identity).toBe('Chris [HappyTiger42]')
     expect(state.friendAccessKey).toBeNull()
   })
 
@@ -64,7 +66,7 @@ describe('authStore', () => {
     const store = useAuthStore.getState()
     expect(store.isAuthenticated()).toBe(false)
 
-    store.setFriendAuth('token', 'session', 'name')
+    store.setFriendAuth('token', 'session', 'name', 'TestUser [Auto1]')
 
     expect(useAuthStore.getState().isAuthenticated()).toBe(true)
   })

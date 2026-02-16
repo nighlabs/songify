@@ -2,10 +2,10 @@ package services
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
-	"math/rand"
+	"math/big"
 	"strings"
-	"time"
 
 	"github.com/songify/backend/internal/db"
 	"github.com/tyler-smith/go-bip39/wordlists"
@@ -19,15 +19,23 @@ var wordlist = wordlists.English
 // Keys follow the pattern "word-word-number" (e.g., "apple-river-42").
 type FriendKeyService struct {
 	queries *db.Queries
-	rng     *rand.Rand
 }
 
 // NewFriendKeyService creates a FriendKeyService with its own random source.
 func NewFriendKeyService(queries *db.Queries) *FriendKeyService {
 	return &FriendKeyService{
 		queries: queries,
-		rng:     rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
+}
+
+// cryptoRandIntn returns a cryptographically secure random int in [0, n).
+// Panics on failure — OS entropy exhaustion is catastrophic.
+func cryptoRandIntn(n int) int {
+	v, err := rand.Int(rand.Reader, big.NewInt(int64(n)))
+	if err != nil {
+		panic(fmt.Sprintf("crypto/rand failed: %v", err))
+	}
+	return int(v.Int64())
 }
 
 // Generate creates a unique friend key, retrying if collisions occur.
@@ -35,9 +43,9 @@ func NewFriendKeyService(queries *db.Queries) *FriendKeyService {
 func (s *FriendKeyService) Generate(ctx context.Context) (string, error) {
 	maxAttempts := 100
 	for i := 0; i < maxAttempts; i++ {
-		word1 := wordlist[s.rng.Intn(len(wordlist))]
-		word2 := wordlist[s.rng.Intn(len(wordlist))]
-		num := s.rng.Intn(100)
+		word1 := wordlist[cryptoRandIntn(len(wordlist))]
+		word2 := wordlist[cryptoRandIntn(len(wordlist))]
+		num := cryptoRandIntn(100)
 		key := fmt.Sprintf("%s-%s-%d", word1, word2, num)
 
 		exists, err := s.queries.FriendKeyExists(ctx, key)
@@ -55,9 +63,9 @@ func (s *FriendKeyService) Generate(ctx context.Context) (string, error) {
 // GenerateName creates a random identity name without uniqueness checking.
 // Returns a PascalCase name like "HappyTiger42".
 func (s *FriendKeyService) GenerateName() string {
-	word1 := wordlist[s.rng.Intn(len(wordlist))]
-	word2 := wordlist[s.rng.Intn(len(wordlist))]
-	num := s.rng.Intn(100)
+	word1 := wordlist[cryptoRandIntn(len(wordlist))]
+	word2 := wordlist[cryptoRandIntn(len(wordlist))]
+	num := cryptoRandIntn(100)
 	return fmt.Sprintf("%s%s%d", capitalize(word1), capitalize(word2), num)
 }
 
