@@ -3,12 +3,32 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/songify/backend/internal/logging"
 	"github.com/songify/backend/internal/models"
+	"github.com/songify/backend/internal/services"
 )
+
+var errForbidden = errors.New("forbidden")
+
+// requireSession returns an error if the claims do not belong to the given session.
+func requireSession(claims *services.Claims, sessionID string) error {
+	if claims.SessionID != sessionID {
+		return errForbidden
+	}
+	return nil
+}
+
+// requireAdmin returns an error if the claims do not belong to an admin of the given session.
+func requireAdmin(claims *services.Claims, sessionID string) error {
+	if claims.SessionID != sessionID || claims.Role != services.RoleAdmin {
+		return errForbidden
+	}
+	return nil
+}
 
 // writeJSON serializes data as JSON and writes it to the response.
 func writeJSON(w http.ResponseWriter, status int, data interface{}) {

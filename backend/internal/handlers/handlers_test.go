@@ -12,6 +12,7 @@ import (
 	"github.com/songify/backend/internal/config"
 	"github.com/songify/backend/internal/crypto"
 	"github.com/songify/backend/internal/models"
+	"github.com/songify/backend/internal/services"
 )
 
 func TestAdminHandler_VerifyPassword(t *testing.T) {
@@ -81,6 +82,51 @@ func TestAdminHandler_VerifyPassword_InvalidJSON(t *testing.T) {
 
 	if rec.Code != http.StatusBadRequest {
 		t.Errorf("Status = %d, want %d", rec.Code, http.StatusBadRequest)
+	}
+}
+
+func TestRequireSession(t *testing.T) {
+	tests := []struct {
+		name      string
+		claims    *services.Claims
+		sessionID string
+		wantErr   bool
+	}{
+		{"matching session", &services.Claims{SessionID: "s1", Role: services.RoleFriend}, "s1", false},
+		{"admin also passes", &services.Claims{SessionID: "s1", Role: services.RoleAdmin}, "s1", false},
+		{"wrong session", &services.Claims{SessionID: "s1", Role: services.RoleFriend}, "s2", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := requireSession(tt.claims, tt.sessionID)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("requireSession() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestRequireAdmin(t *testing.T) {
+	tests := []struct {
+		name      string
+		claims    *services.Claims
+		sessionID string
+		wantErr   bool
+	}{
+		{"admin correct session", &services.Claims{SessionID: "s1", Role: services.RoleAdmin}, "s1", false},
+		{"friend same session", &services.Claims{SessionID: "s1", Role: services.RoleFriend}, "s1", true},
+		{"admin wrong session", &services.Claims{SessionID: "s1", Role: services.RoleAdmin}, "s2", true},
+		{"friend wrong session", &services.Claims{SessionID: "s1", Role: services.RoleFriend}, "s2", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := requireAdmin(tt.claims, tt.sessionID)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("requireAdmin() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
 	}
 }
 
