@@ -25,6 +25,14 @@ func main() {
 	// Load configuration
 	cfg := config.Load()
 
+	// Warn if using insecure default secrets
+	if cfg.JWTSecret == "change-me-in-production" {
+		slog.Warn("JWT_SECRET is using the insecure default value — set it in production")
+	}
+	if cfg.AdminPortalPassword == "admin123" {
+		slog.Warn("ADMIN_PORTAL_PASSWORD is using the insecure default value — set it in production")
+	}
+
 	// Initialize Sentry (no-op when DSN is empty)
 	if cfg.SentryDSN != "" {
 		err := sentry.Init(sentry.ClientOptions{

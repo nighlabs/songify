@@ -37,22 +37,36 @@ func New(cfg *config.Config, queries *db.Queries, eventBroker *broker.Broker) ht
 	r.Use(middleware.RequestContextMiddleware)
 	r.Use(middleware.CORSMiddleware(cfg.CORSAllowedOrigins))
 
+	// Global request body size limit (1 MB)
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+			next.ServeHTTP(w, r)
+		})
+	})
+
 	// Services
 	authService := services.NewAuthService(cfg.JWTSecret, cfg.AdminTokenDuration, cfg.FriendTokenDuration)
 	friendKeyService := services.NewFriendKeyService(queries)
 	spotifyService := services.NewSpotifyService(cfg.SpotifyClientID, cfg.SpotifyClientSecret)
+	youtubeService := services.NewYouTubeService(cfg.YouTubeAPIKey)
+
+	// Lounge manager (YouTube TV pairing, credentials persisted to DB)
+	loungeManager := services.NewLoungeManager(queries)
 
 	// Handlers
 	adminHandler := handlers.NewAdminHandler(cfg)
 	configHandler := handlers.NewConfigHandler(cfg)
 	sentryTunnelHandler := handlers.NewSentryTunnelHandler(cfg)
-	sessionHandler := handlers.NewSessionHandler(queries, authService, friendKeyService)
-	requestHandler := handlers.NewRequestHandler(queries, eventBroker)
+	sessionHandler := handlers.NewSessionHandler(queries, authService, friendKeyService, cfg)
+	requestHandler := handlers.NewRequestHandler(queries, eventBroker, loungeManager)
 	sseHandler := handlers.NewSSEHandler(eventBroker)
-	spotifyHandler := handlers.NewSpotifyHandler(spotifyService)
+	spotifyHandler := handlers.NewSpotifyHandler(spotifyService, queries)
+	youtubeHandler := handlers.NewYouTubeHandler(youtubeService, loungeManager, queries)
 
-	// Rate limiter for search
+	// Rate limiters
 	searchRateLimiter := middleware.NewRateLimiter(cfg.RateLimitPerMinute)
+	authRateLimiter := middleware.NewRateLimiter(cfg.AuthRateLimitPerMinute)
 
 	// Routes
 	r.Route("/api", func(r chi.Router) {
@@ -68,19 +82,19 @@ func New(cfg *config.Config, queries *db.Queries, eventBroker *broker.Broker) ht
 		// Sentry tunnel (proxies browser events to avoid CORS)
 		r.Post("/sentry-tunnel", sentryTunnelHandler.Tunnel)
 
-		// Admin portal verification (no auth required)
-		r.Post("/admin/verify", adminHandler.VerifyPassword)
+		// Admin portal verification (no auth required, rate limited)
+		r.With(authRateLimiter.Middleware).Post("/admin/verify", adminHandler.VerifyPassword)
 
 		// Session management
 		r.Route("/sessions", func(r chi.Router) {
-			// Create session (requires admin portal verification - done client-side)
-			r.Post("/", sessionHandler.Create)
+			// Create session (rate limited)
+			r.With(authRateLimiter.Middleware).Post("/", sessionHandler.Create)
 
-			// Join session with friend key (no auth)
-			r.Post("/join", sessionHandler.Join)
+			// Join session with friend key (rate limited)
+			r.With(authRateLimiter.Middleware).Post("/join", sessionHandler.Join)
 
-			// Rejoin as admin (no auth)
-			r.Post("/rejoin", sessionHandler.Rejoin)
+			// Rejoin as admin (rate limited)
+			r.With(authRateLimiter.Middleware).Post("/rejoin", sessionHandler.Rejoin)
 
 			// SSE stream for real-time request updates (uses query param auth)
 			r.With(
@@ -95,7 +109,16 @@ func New(cfg *config.Config, queries *db.Queries, eventBroker *broker.Broker) ht
 				r.Use(middleware.UpdateRequestContextMiddleware)
 
 				r.Get("/", sessionHandler.Get)
-				r.Put("/playlist", sessionHandler.UpdatePlaylist)
+				r.Put("/spotify/playlist", spotifyHandler.UpdatePlaylist)
+
+				// YouTube Lounge TV pairing (admin only)
+				r.Route("/youtube", func(r chi.Router) {
+					r.Use(middleware.AdminOnlyMiddleware)
+					r.Post("/pair", youtubeHandler.Pair)
+					r.Delete("/pair", youtubeHandler.Disconnect)
+					r.Post("/reconnect", youtubeHandler.Reconnect)
+					r.Get("/status", youtubeHandler.LoungeStatus)
+				})
 
 				// Admin-only settings routes
 				r.Route("/settings", func(r chi.Router) {
@@ -124,6 +147,7 @@ func New(cfg *config.Config, queries *db.Queries, eventBroker *broker.Broker) ht
 						r.Use(middleware.AdminOnlyMiddleware)
 						r.Put("/approve", requestHandler.Approve)
 						r.Put("/reject", requestHandler.Reject)
+						r.Put("/play-next", requestHandler.PlayNext)
 					})
 				})
 			})
@@ -131,6 +155,9 @@ func New(cfg *config.Config, queries *db.Queries, eventBroker *broker.Broker) ht
 
 		// Spotify search (rate limited)
 		r.With(searchRateLimiter.Middleware).Get("/spotify/search", spotifyHandler.Search)
+
+		// YouTube search (rate limited)
+		r.With(searchRateLimiter.Middleware).Get("/youtube/search", youtubeHandler.Search)
 	})
 
 	return r

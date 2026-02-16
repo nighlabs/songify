@@ -5,7 +5,7 @@ A collaborative playlist request app where friends can search for songs and subm
 ## Features
 
 - **Easy Access**: Friends join with memorable keys like `happy-tiger-42`
-- **Song Search**: Search Spotify's catalog without needing a Spotify account
+- **Song Search**: Search Spotify or YouTube's catalog without needing an account
 - **Real-Time Updates**: Live request feed via Server-Sent Events (SSE)
 - **Request Queue**: See pending, approved, and rejected requests in real-time
 - **Requester Names**: See who requested each song
@@ -23,6 +23,7 @@ A collaborative playlist request app where friends can search for songs and subm
 - SQLite with sqlc for type-safe queries
 - JWT authentication
 - Spotify Client Credentials flow for search
+- YouTube Data API v3 for video search
 
 **Frontend**
 - React 19 + TypeScript
@@ -44,7 +45,8 @@ A collaborative playlist request app where friends can search for songs and subm
 - Node.js 18+
 
 **Both require:**
-- A [Spotify Developer](https://developer.spotify.com/dashboard) application
+- A [Spotify Developer](https://developer.spotify.com/dashboard) application (for Spotify sessions)
+- A [YouTube Data API v3](https://console.cloud.google.com/) key (for YouTube sessions, optional)
 
 ### Spotify Setup
 
@@ -56,17 +58,28 @@ A collaborative playlist request app where friends can search for songs and subm
    - Your production URL + `/callback` if deploying
 4. Note your Client ID and Client Secret
 
+### YouTube Setup
+
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project (or select an existing one)
+3. Enable the **YouTube Data API v3**
+4. Create an API key under **Credentials**
+5. Note your API key
+
+> **Note:** The default quota is 10,000 units/day. Each search costs 100 units, allowing ~100 searches/day. Request a quota increase if needed.
+
 ### Docker Deployment (Recommended)
 
 ```bash
 # Copy and edit environment file
 cp .env.example .env
 
-# Edit .env with your values (all are required):
+# Edit .env with your values:
 # - JWT_SECRET
 # - ADMIN_PORTAL_PASSWORD
 # - SPOTIFY_CLIENT_ID
 # - SPOTIFY_CLIENT_SECRET
+# - YOUTUBE_API_KEY (optional, for YouTube sessions)
 
 # Build and start containers
 docker compose up -d
@@ -94,6 +107,7 @@ cp .env.example .env
 # Edit .env with your values:
 # - SPOTIFY_CLIENT_ID
 # - SPOTIFY_CLIENT_SECRET
+# - YOUTUBE_API_KEY (optional, for YouTube sessions)
 # - JWT_SECRET (change for production)
 # - ADMIN_PORTAL_PASSWORD
 
@@ -161,6 +175,7 @@ The frontend runs on `http://localhost:5173`.
 | PUT | `/api/sessions/{id}/requests/{rid}/reject` | Admin | Reject request |
 | DELETE | `/api/sessions/{id}/requests` | Admin | Archive all requests |
 | GET | `/api/spotify/search` | Rate limited | Search Spotify |
+| GET | `/api/youtube/search` | Rate limited | Search YouTube |
 
 ## Configuration
 
@@ -174,6 +189,7 @@ The frontend runs on `http://localhost:5173`.
 | `ADMIN_PORTAL_PASSWORD` | `admin123` | Password for admin portal |
 | `SPOTIFY_CLIENT_ID` | - | Spotify app client ID |
 | `SPOTIFY_CLIENT_SECRET` | - | Spotify app client secret |
+| `YOUTUBE_API_KEY` | - | YouTube Data API v3 key |
 | `ADMIN_TOKEN_DURATION` | `168h` | Admin JWT validity (7 days) |
 | `FRIEND_TOKEN_DURATION` | `12h` | Friend JWT validity |
 | `RATE_LIMIT_PER_MINUTE` | `10` | Search rate limit per IP |

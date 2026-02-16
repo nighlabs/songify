@@ -21,6 +21,9 @@ func (h *ConfigHandler) PublicConfig(w http.ResponseWriter, r *http.Request) {
 	// Only expose public, non-sensitive configuration
 	response := map[string]interface{}{
 		"spotifyClientId": h.cfg.SpotifyClientID,
+		"spotify": map[string]interface{}{
+			"clientId": h.cfg.SpotifyClientID,
+		},
 	}
 
 	if h.cfg.SentryDSNFrontend != "" {

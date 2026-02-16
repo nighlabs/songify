@@ -35,7 +35,11 @@ func (h *AdminHandler) VerifyPassword(w http.ResponseWriter, r *http.Request) {
 
 	// Hash the configured password using scrypt with UTC day as salt
 	utcDay := strconv.Itoa(time.Now().UTC().Day())
-	expectedHash := crypto.HashWithScrypt(h.cfg.AdminPortalPassword, utcDay)
+	expectedHash, err := crypto.HashWithScrypt(h.cfg.AdminPortalPassword, utcDay)
+	if err != nil {
+		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to hash password", err)
+		return
+	}
 
 	valid := req.PasswordHash == expectedHash
 

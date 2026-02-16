@@ -12,9 +12,9 @@
  * - Redirects to session page
  */
 
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Plus, ArrowLeft } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { Plus, ArrowLeft, Music } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -25,12 +25,23 @@ import { useAuthStore } from '@/stores/authStore'
 
 export function CreateSessionPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const setAdminAuth = useAuthStore((state) => state.setAdminAuth)
+
+  const portalPasswordHash = (location.state as { portalPasswordHash?: string } | null)?.portalPasswordHash
+
+  // Redirect to admin portal if no portal password hash in navigation state
+  useEffect(() => {
+    if (!portalPasswordHash) {
+      navigate('/admin', { replace: true })
+    }
+  }, [portalPasswordHash, navigate])
 
   const [displayName, setDisplayName] = useState('')
   const [adminName, setAdminName] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [musicService, setMusicService] = useState<'spotify' | 'youtube'>('spotify')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -61,6 +72,8 @@ export function CreateSessionPage() {
         displayName,
         adminName,
         adminPasswordHash: passwordHash,
+        adminPortalPasswordHash: portalPasswordHash!,
+        musicService,
       })
 
       setAdminAuth(
@@ -109,6 +122,30 @@ export function CreateSessionPage() {
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Music Service</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={musicService === 'spotify' ? 'default' : 'outline'}
+                    className={musicService === 'spotify' ? 'bg-green-600 hover:bg-green-700 flex-1' : 'flex-1'}
+                    onClick={() => setMusicService('spotify')}
+                  >
+                    <Music className="h-4 w-4 mr-2" />
+                    Spotify
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={musicService === 'youtube' ? 'default' : 'outline'}
+                    className={musicService === 'youtube' ? 'bg-red-600 hover:bg-red-700 flex-1' : 'flex-1'}
+                    onClick={() => setMusicService('youtube')}
+                  >
+                    <Music className="h-4 w-4 mr-2" />
+                    YouTube
+                  </Button>
+                </div>
               </div>
 
               <div className="space-y-2">

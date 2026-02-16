@@ -8,6 +8,8 @@ import type {
   Session,
   SongRequest,
   SpotifyTrack,
+  YouTubeVideo,
+  LoungeStatus,
   CreateSessionRequest,
   CreateSessionResponse,
   JoinSessionResponse,
@@ -97,10 +99,10 @@ export const api = {
   },
 
   /** Join a session as a friend using the hashed access key */
-  joinSession: async (friendKeyHash: string): Promise<JoinSessionResponse> => {
+  joinSession: async (friendKeyHash: string, displayName?: string): Promise<JoinSessionResponse> => {
     return request('/sessions/join', {
       method: 'POST',
-      body: JSON.stringify({ friendKeyHash }),
+      body: JSON.stringify({ friendKeyHash, displayName }),
     })
   },
 
@@ -132,13 +134,13 @@ export const api = {
     return request(`/sessions/${sessionId}/requests`, {
       method: 'POST',
       body: JSON.stringify({
-        spotifyTrackId: track.id,
+        externalTrackId: track.id,
         trackName: track.name,
         artistNames: track.artists.join(', '),
         albumName: track.albumName,
         albumArtUrl: track.albumArtUrl,
         durationMs: track.durationMs,
-        spotifyUri: track.uri,
+        externalUri: track.uri,
       }),
     })
   },
@@ -176,9 +178,71 @@ export const api = {
     return request(`/spotify/search?q=${encodeURIComponent(query)}`)
   },
 
+  // ----- YouTube Integration -----
+
+  /** Search YouTube for videos (proxied through backend) */
+  searchYouTube: async (query: string): Promise<{ videos: YouTubeVideo[] }> => {
+    return request(`/youtube/search?q=${encodeURIComponent(query)}`)
+  },
+
+  /** Submit a YouTube video as a song request */
+  submitYouTubeRequest: async (
+    sessionId: string,
+    video: YouTubeVideo
+  ): Promise<SongRequest> => {
+    return request(`/sessions/${sessionId}/requests`, {
+      method: 'POST',
+      body: JSON.stringify({
+        externalTrackId: video.id,
+        trackName: video.title,
+        artistNames: video.channelTitle,
+        albumName: '',
+        albumArtUrl: video.thumbnailUrl,
+        durationMs: video.durationMs,
+        externalUri: `https://www.youtube.com/watch?v=${video.id}`,
+      }),
+    })
+  },
+
+  // ----- YouTube Lounge (TV Pairing) -----
+
+  /** Pair with a YouTube TV using a pairing code */
+  pairLounge: async (sessionId: string, pairingCode: string): Promise<LoungeStatus> => {
+    return request(`/sessions/${sessionId}/youtube/pair`, {
+      method: 'POST',
+      body: JSON.stringify({ pairingCode }),
+    })
+  },
+
+  /** Disconnect from a paired YouTube TV */
+  disconnectLounge: async (sessionId: string): Promise<LoungeStatus> => {
+    return request(`/sessions/${sessionId}/youtube/pair`, {
+      method: 'DELETE',
+    })
+  },
+
+  /** Reconnect to a previously paired YouTube TV without a new pairing code */
+  reconnectLounge: async (sessionId: string): Promise<LoungeStatus> => {
+    return request(`/sessions/${sessionId}/youtube/reconnect`, {
+      method: 'POST',
+    })
+  },
+
+  /** Get the current YouTube TV connection status */
+  getLoungeStatus: async (sessionId: string): Promise<LoungeStatus> => {
+    return request(`/sessions/${sessionId}/youtube/status`)
+  },
+
+  /** Approve a request and play it immediately on the TV (admin only) */
+  playNextSongRequest: async (sessionId: string, requestId: number): Promise<SongRequest> => {
+    return request(`/sessions/${sessionId}/requests/${requestId}/play-next`, {
+      method: 'PUT',
+    })
+  },
+
   /** Link a Spotify playlist to the session */
   updateSessionPlaylist: async (sessionId: string, spotifyPlaylistId: string, spotifyPlaylistName: string): Promise<void> => {
-    return request(`/sessions/${sessionId}/playlist`, {
+    return request(`/sessions/${sessionId}/spotify/playlist`, {
       method: 'PUT',
       body: JSON.stringify({ spotifyPlaylistId, spotifyPlaylistName }),
     })
