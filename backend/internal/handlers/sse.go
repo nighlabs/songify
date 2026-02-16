@@ -28,7 +28,7 @@ func (h *SSEHandler) Stream(w http.ResponseWriter, r *http.Request) {
 	sessionID := chi.URLParam(r, "id")
 	claims := middleware.GetClaims(r.Context())
 
-	if claims.SessionID != sessionID {
+	if err := requireSession(claims, sessionID); err != nil {
 		writeError(w, http.StatusForbidden, "access denied")
 		return
 	}

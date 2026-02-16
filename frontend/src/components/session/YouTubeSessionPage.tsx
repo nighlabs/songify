@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Play } from 'lucide-react'
@@ -11,6 +11,8 @@ import { ProcessedRequests } from './ProcessedRequests'
 import { EmptyState } from './EmptyState'
 import { useAuthStore } from '@/stores/authStore'
 import { api } from '@/services/api'
+import { useSortedRequests } from '@/hooks/useSortedRequests'
+import { useRequestMutations } from '@/hooks/useRequestMutations'
 import type { Session, SongRequest, LoungeStatus } from '@/types'
 
 export function YouTubeSessionPage({
@@ -24,7 +26,6 @@ export function YouTubeSessionPage({
 }) {
   const queryClient = useQueryClient()
   const { isAdmin } = useAuthStore()
-  const [approveError, setApproveError] = useState<string | null>(null)
 
   // Lounge status polling (admin only)
   const { data: loungeStatus } = useQuery<LoungeStatus>({
@@ -92,39 +93,15 @@ export function YouTubeSessionPage({
     },
   })
 
-  const approveMutation = useMutation({
-    mutationFn: (requestId: number) => api.approveSongRequest(session.id, requestId),
-    onSuccess: () => {
-      setApproveError(null)
-      queryClient.invalidateQueries({ queryKey: ['requests', session.id] })
-      toast.success('Song approved')
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || 'Failed to approve song')
-    },
-  })
-
-  const rejectMutation = useMutation({
-    mutationFn: (requestId: number) => api.rejectSongRequest(session.id, requestId),
-    onSuccess: () => {
-      toast.success('Song rejected')
-      queryClient.invalidateQueries({ queryKey: ['requests', session.id] })
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || 'Failed to reject song')
-    },
+  const { approveMutation, rejectMutation, approveError, setApproveError } = useRequestMutations({
+    sessionId: session.id,
   })
 
   const getExternalLink = (request: SongRequest): string => {
     return request.externalUri
   }
 
-  const pendingRequests = requests
-    .filter((r) => r.status === 'pending')
-    .sort((a, b) => new Date(a.requestedAt).getTime() - new Date(b.requestedAt).getTime())
-  const processedRequests = requests
-    .filter((r) => r.status !== 'pending')
-    .sort((a, b) => new Date(b.processedAt ?? b.requestedAt).getTime() - new Date(a.processedAt ?? a.requestedAt).getTime())
+  const { pending: pendingRequests, processed: processedRequests } = useSortedRequests(requests)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-50 to-pink-50">

@@ -71,12 +71,7 @@ func (h *SpotifyHandler) UpdatePlaylist(w http.ResponseWriter, r *http.Request) 
 	sessionID := chi.URLParam(r, "id")
 	claims := middleware.GetClaims(r.Context())
 
-	if claims.SessionID != sessionID {
-		writeError(w, http.StatusForbidden, "access denied")
-		return
-	}
-
-	if claims.Role != services.RoleAdmin {
+	if err := requireAdmin(claims, sessionID); err != nil {
 		writeError(w, http.StatusForbidden, "admin access required")
 		return
 	}
