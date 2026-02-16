@@ -12,8 +12,8 @@
  * - Redirects to session page
  */
 
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { Plus, ArrowLeft, Music } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -25,7 +25,17 @@ import { useAuthStore } from '@/stores/authStore'
 
 export function CreateSessionPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const setAdminAuth = useAuthStore((state) => state.setAdminAuth)
+
+  const portalPasswordHash = (location.state as { portalPasswordHash?: string } | null)?.portalPasswordHash
+
+  // Redirect to admin portal if no portal password hash in navigation state
+  useEffect(() => {
+    if (!portalPasswordHash) {
+      navigate('/admin', { replace: true })
+    }
+  }, [portalPasswordHash, navigate])
 
   const [displayName, setDisplayName] = useState('')
   const [adminName, setAdminName] = useState('')
@@ -62,6 +72,7 @@ export function CreateSessionPage() {
         displayName,
         adminName,
         adminPasswordHash: passwordHash,
+        adminPortalPasswordHash: portalPasswordHash!,
         musicService,
       })
 

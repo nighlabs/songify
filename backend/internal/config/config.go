@@ -20,8 +20,9 @@ type Config struct {
 	YouTubeAPIKey         string
 	AdminTokenDuration    time.Duration
 	FriendTokenDuration   time.Duration
-	RateLimitPerMinute    int
-	CORSAllowedOrigins    []string
+	RateLimitPerMinute        int
+	AuthRateLimitPerMinute    int
+	CORSAllowedOrigins        []string
 	TrustedProxies        []string
 	SentryDSN             string
 	SentryDSNFrontend     string
@@ -40,7 +41,8 @@ func Load() *Config {
 		YouTubeAPIKey:         getEnv("YOUTUBE_API_KEY", ""),
 		AdminTokenDuration:    getDurationEnv("ADMIN_TOKEN_DURATION", 7*24*time.Hour),
 		FriendTokenDuration:   getDurationEnv("FRIEND_TOKEN_DURATION", 12*time.Hour),
-		RateLimitPerMinute:    getIntEnv("RATE_LIMIT_PER_MINUTE", 10),
+		RateLimitPerMinute:        getIntEnv("RATE_LIMIT_PER_MINUTE", 10),
+		AuthRateLimitPerMinute:    getIntEnv("AUTH_RATE_LIMIT_PER_MINUTE", 5),
 		CORSAllowedOrigins:    []string{"http://localhost:5173", "http://localhost:3000"},
 		TrustedProxies:        getStringSliceEnv("TRUSTED_PROXIES"),
 		SentryDSN:             getEnv("SENTRY_DSN", ""),

@@ -41,7 +41,7 @@ export function AdminPortalPage() {
       const passwordHash = await hashPassword(password, utcDay)
       const response = await api.verifyAdminPassword(passwordHash)
       if (response.valid) {
-        navigate('/admin/create')
+        navigate('/admin/create', { state: { portalPasswordHash: passwordHash } })
       } else {
         setError('Invalid password')
       }

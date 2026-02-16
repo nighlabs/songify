@@ -6,6 +6,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 )
 
 type Querier interface {
@@ -16,6 +17,7 @@ type Querier interface {
 	CreateSongRequest(ctx context.Context, arg CreateSongRequestParams) (SongRequest, error)
 	DeleteAllSongRequestsBySessionID(ctx context.Context, sessionID string) error
 	DeleteProhibitedPattern(ctx context.Context, id int64) error
+	DeleteProhibitedPatternBySession(ctx context.Context, arg DeleteProhibitedPatternBySessionParams) (sql.Result, error)
 	DeleteProhibitedPatternsBySessionID(ctx context.Context, sessionID string) error
 	DeleteSession(ctx context.Context, id string) error
 	DeleteSongRequest(ctx context.Context, id int64) error

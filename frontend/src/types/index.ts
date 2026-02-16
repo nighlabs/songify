@@ -104,7 +104,8 @@ export interface LoungeStatus {
 export interface CreateSessionRequest {
   displayName: string
   adminName: string
-  adminPasswordHash: string     // Scrypt hash of admin password
+  adminPasswordHash: string             // Scrypt hash of admin password
+  adminPortalPasswordHash: string       // Scrypt hash of admin portal password (server-side verification)
   musicService?: 'spotify' | 'youtube'
   spotifyPlaylistId?: string
   songDurationLimitMs?: number
