@@ -33,6 +33,9 @@ import {
   RefreshCw,
   Ban,
   AlertTriangle,
+  Tv,
+  Play,
+  Unplug,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -41,7 +44,7 @@ import { Badge } from '@/components/ui/badge'
 import { AdminSettings } from '@/components/AdminSettings'
 import { api } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
-import type { Session, SongRequest, SpotifyTrack, YouTubeVideo } from '@/types'
+import type { Session, SongRequest, SpotifyTrack, YouTubeVideo, LoungeStatus } from '@/types'
 import {
   authenticateSpotify,
   isSpotifyAuthenticated,
@@ -278,6 +281,178 @@ function SpotifyStatus({
   )
 }
 
+/**
+ * YouTube TV connection status indicator in the header.
+ *
+ * States:
+ * - Disconnected: Red "Connect TV" button → opens inline pairing code input
+ * - Connecting: Blue loading spinner
+ * - Connected: Green badge with TV icon + screenName, dropdown with disconnect option
+ * - Error: Amber badge with error message, dropdown with reconnect option
+ */
+function YouTubeStatus({
+  loungeStatus,
+  onPair,
+  onDisconnect,
+  onReconnect,
+  isPairing,
+  isReconnecting,
+}: {
+  loungeStatus: LoungeStatus | undefined
+  onPair: (code: string) => void
+  onDisconnect: () => void
+  onReconnect: () => void
+  isPairing: boolean
+  isReconnecting: boolean
+}) {
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [pairingInput, setPairingInput] = useState('')
+  const [showPairingInput, setShowPairingInput] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useClickOutside(dropdownRef, useCallback(() => {
+    setDropdownOpen(false)
+    setShowPairingInput(false)
+  }, []))
+
+  const status = loungeStatus?.status ?? 'disconnected'
+
+  const handlePair = () => {
+    const code = pairingInput.replace(/\D/g, '')
+    if (code) {
+      onPair(code)
+      setPairingInput('')
+      setShowPairingInput(false)
+    }
+  }
+
+  if (status === 'connecting' || isPairing || isReconnecting) {
+    return (
+      <div className="h-8 w-8 rounded bg-blue-100 flex items-center justify-center">
+        <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+      </div>
+    )
+  }
+
+  if (status === 'disconnected') {
+    return (
+      <div className="relative" ref={dropdownRef}>
+        <Button
+          size="sm"
+          onClick={() => setShowPairingInput(!showPairingInput)}
+          className="bg-red-600 hover:bg-red-700 text-white"
+        >
+          <Tv className="h-4 w-4 mr-1" />
+          Connect TV
+        </Button>
+
+        {showPairingInput && (
+          <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border p-3 z-20">
+            <p className="text-sm font-medium mb-2">Enter TV pairing code</p>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Pairing code..."
+                value={pairingInput}
+                onChange={(e) => setPairingInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handlePair()}
+                autoFocus
+              />
+              <Button size="sm" onClick={handlePair} disabled={!pairingInput.replace(/\D/g, '')}>
+                Pair
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  if (status === 'error') {
+    return (
+      <div className="relative" ref={dropdownRef}>
+        <button
+          onClick={() => setDropdownOpen(!dropdownOpen)}
+          className="flex items-center gap-2 px-2 py-1 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 transition-colors"
+        >
+          <div className="h-7 w-7 rounded bg-amber-500 flex items-center justify-center">
+            <AlertTriangle className="h-4 w-4 text-white" />
+          </div>
+          <span className="text-sm font-medium text-amber-800 max-w-[150px] truncate">
+            Reconnect
+          </span>
+        </button>
+
+        {dropdownOpen && (
+          <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border py-1 z-20">
+            <div className="px-3 py-2 border-b">
+              <p className="text-xs text-amber-600 font-medium">TV Disconnected</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {loungeStatus?.error || 'Connection lost'}
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setDropdownOpen(false)
+                onReconnect()
+              }}
+              className="flex items-center gap-2 px-3 py-2 w-full text-left hover:bg-muted transition-colors text-amber-700 font-medium"
+            >
+              <RefreshCw className="h-4 w-4" />
+              <span>Reconnect TV</span>
+            </button>
+            <button
+              onClick={() => {
+                setDropdownOpen(false)
+                onDisconnect()
+              }}
+              className="flex items-center gap-2 px-3 py-2 w-full text-left hover:bg-muted transition-colors text-red-600"
+            >
+              <Unplug className="h-4 w-4" />
+              <span>Disconnect</span>
+            </button>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // Connected state
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        onClick={() => setDropdownOpen(!dropdownOpen)}
+        className="flex items-center gap-2 px-2 py-1 rounded-lg border border-green-200 bg-green-50 hover:bg-green-100 transition-colors"
+      >
+        <div className="h-7 w-7 rounded bg-green-600 flex items-center justify-center">
+          <Tv className="h-4 w-4 text-white" />
+        </div>
+        <span className="text-sm font-medium text-green-800 max-w-[150px] truncate">
+          {loungeStatus?.screenName || 'TV Connected'}
+        </span>
+      </button>
+
+      {dropdownOpen && (
+        <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border py-1 z-20">
+          <div className="px-3 py-2 border-b">
+            <p className="text-xs text-muted-foreground">Connected TV</p>
+            <p className="font-medium truncate">{loungeStatus?.screenName || 'YouTube TV'}</p>
+          </div>
+          <button
+            onClick={() => {
+              setDropdownOpen(false)
+              onDisconnect()
+            }}
+            className="flex items-center gap-2 px-3 py-2 w-full text-left hover:bg-muted transition-colors text-red-600"
+          >
+            <Unplug className="h-4 w-4" />
+            <span>Disconnect</span>
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function SessionPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -413,6 +588,77 @@ export function SessionPage() {
     },
   })
 
+  // ----- YouTube Lounge (TV Pairing) -----
+
+  // Lounge status polling (admin + YouTube sessions only)
+  const { data: loungeStatus } = useQuery<LoungeStatus>({
+    queryKey: ['loungeStatus', id],
+    queryFn: () => api.getLoungeStatus(id!),
+    enabled: !!id && isAdmin && session?.musicService === 'youtube',
+    refetchInterval: 10000,
+    refetchIntervalInBackground: false,
+  })
+
+  // Surface toast when lounge status changes to error (e.g. poll failures)
+  const prevLoungeStatusRef = useRef<string | undefined>(undefined)
+  useEffect(() => {
+    const currentStatus = loungeStatus?.status
+    if (currentStatus === 'error' && prevLoungeStatusRef.current !== 'error') {
+      toast.error(loungeStatus?.error || 'TV connection lost')
+    }
+    prevLoungeStatusRef.current = currentStatus
+  }, [loungeStatus?.status, loungeStatus?.error])
+
+  // Pair with YouTube TV
+  const pairLoungeMutation = useMutation({
+    mutationFn: (pairingCode: string) => api.pairLounge(id!, pairingCode),
+    onSuccess: (data) => {
+      queryClient.setQueryData(['loungeStatus', id], data)
+      toast.success('Connected to TV')
+    },
+    onError: (error: Error) => {
+      queryClient.invalidateQueries({ queryKey: ['loungeStatus', id] })
+      toast.error(error.message || 'Failed to pair with TV')
+    },
+  })
+
+  // Disconnect from YouTube TV
+  const disconnectLoungeMutation = useMutation({
+    mutationFn: () => api.disconnectLounge(id!),
+    onSuccess: (data) => {
+      queryClient.setQueryData(['loungeStatus', id], data)
+      toast.success('Disconnected from TV')
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to disconnect')
+    },
+  })
+
+  // Play next (approve + play immediately on TV)
+  const playNextMutation = useMutation({
+    mutationFn: (requestId: number) => api.playNextSongRequest(id!, requestId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['requests', id] })
+      toast.success('Playing on TV')
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to play on TV')
+    },
+  })
+
+  // Reconnect to YouTube TV using saved credentials
+  const reconnectLoungeMutation = useMutation({
+    mutationFn: () => api.reconnectLounge(id!),
+    onSuccess: (data) => {
+      queryClient.setQueryData(['loungeStatus', id], data)
+      toast.success('Reconnected to TV')
+    },
+    onError: (error: Error) => {
+      queryClient.invalidateQueries({ queryKey: ['loungeStatus', id] })
+      toast.error(error.message || 'Failed to reconnect')
+    },
+  })
+
   // Reject a request (admin only)
   const rejectMutation = useMutation({
     mutationFn: (requestId: number) => api.rejectSongRequest(id!, requestId),
@@ -532,14 +778,15 @@ export function SessionPage() {
       if (!session) return null
 
       for (const p of session.prohibitedPatterns || []) {
-        if (p.patternType === 'artist' &&
-            video.channelTitle.toLowerCase().includes(p.pattern.toLowerCase())) {
-          return `Channel matches prohibited pattern "${p.pattern}"`
-        }
         if (p.patternType === 'title' &&
             video.title.toLowerCase().includes(p.pattern.toLowerCase())) {
           return `Title matches prohibited pattern "${p.pattern}"`
         }
+      }
+
+      // Check duration limit
+      if (session.songDurationLimitMs && video.durationMs > session.songDurationLimitMs) {
+        return `Song exceeds ${formatDuration(session.songDurationLimitMs)} time limit`
       }
 
       return null
@@ -589,6 +836,16 @@ export function SessionPage() {
                   isAuthenticated={isSpotifyAuthenticated()}
                   onConnect={handleSpotifyAuth}
                   onChangePlaylist={handleSpotifyAuth}
+                />
+              )}
+              {isAdmin && session?.musicService === 'youtube' && (
+                <YouTubeStatus
+                  loungeStatus={loungeStatus}
+                  onPair={(code) => pairLoungeMutation.mutate(code)}
+                  onDisconnect={() => disconnectLoungeMutation.mutate()}
+                  onReconnect={() => reconnectLoungeMutation.mutate()}
+                  isPairing={pairLoungeMutation.isPending}
+                  isReconnecting={reconnectLoungeMutation.isPending}
                 />
               )}
               {isAdmin && friendAccessKey && (
@@ -691,6 +948,11 @@ export function SessionPage() {
                             </p>
                           </div>
                         </a>
+                        {video.durationMs > 0 && (
+                          <span className="text-sm text-muted-foreground flex-shrink-0">
+                            {formatDuration(video.durationMs)}
+                          </span>
+                        )}
                         <div className="ml-auto flex-shrink-0">
                           {isBlocked ? (
                             <div
@@ -966,12 +1228,25 @@ export function SessionPage() {
                     <StatusBadge status={request.status} />
                     {isAdmin && (
                       <div className="flex gap-1">
+                        {session?.musicService === 'youtube' && loungeStatus?.status === 'connected' && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="text-blue-600 hover:bg-blue-100"
+                            onClick={() => playNextMutation.mutate(request.id)}
+                            disabled={playNextMutation.isPending}
+                            title="Play Next"
+                          >
+                            <Play className="h-4 w-4" />
+                          </Button>
+                        )}
                         <Button
                           size="icon"
                           variant="ghost"
                           className="text-green-600 hover:bg-green-100"
                           onClick={() => approveMutation.mutate(request.id)}
                           disabled={approveMutation.isPending}
+                          title={session?.musicService === 'youtube' && loungeStatus?.status === 'connected' ? 'Add to Queue' : 'Approve'}
                         >
                           <Check className="h-4 w-4" />
                         </Button>

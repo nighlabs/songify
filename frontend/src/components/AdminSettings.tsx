@@ -111,6 +111,7 @@ export function AdminSettings({ session, onSessionUpdate }: AdminSettingsProps) 
         onOpenChange={setPatternsOpen}
         sessionId={session.id}
         patterns={session.prohibitedPatterns || []}
+        musicService={session.musicService}
         onUpdate={onSessionUpdate}
       />
 

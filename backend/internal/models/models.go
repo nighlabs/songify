@@ -170,6 +170,19 @@ type YouTubeVideoResponse struct {
 	Title        string `json:"title"`
 	ChannelTitle string `json:"channelTitle"`
 	ThumbnailURL string `json:"thumbnailUrl"`
+	DurationMS   int64  `json:"durationMs"`
+}
+
+// PairLoungeRequest is sent by an admin to pair with a YouTube TV via Lounge API.
+type PairLoungeRequest struct {
+	PairingCode string `json:"pairingCode"`
+}
+
+// LoungeStatusResponse represents the current YouTube TV connection state.
+type LoungeStatusResponse struct {
+	Status     string  `json:"status"`              // connected/disconnected/error/connecting
+	ScreenName *string `json:"screenName,omitempty"`
+	Error      *string `json:"error,omitempty"`
 }
 
 // ErrorResponse is the standard error format returned by all endpoints.
