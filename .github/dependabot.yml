@@ -25,6 +25,12 @@ updates:
       npm-all:
         patterns:
           - "*"
+    ignore:
+      # eslint-plugin-react-hooks@7.x only supports eslint <=9
+      - dependency-name: "eslint"
+        versions: [">=10"]
+      - dependency-name: "@eslint/js"
+        versions: [">=10"]
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
