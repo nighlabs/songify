@@ -43,15 +43,18 @@ func New(cfg *config.Config, queries *db.Queries, eventBroker *broker.Broker) ht
 	spotifyService := services.NewSpotifyService(cfg.SpotifyClientID, cfg.SpotifyClientSecret)
 	youtubeService := services.NewYouTubeService(cfg.YouTubeAPIKey)
 
+	// Lounge manager (YouTube TV pairing, credentials persisted to DB)
+	loungeManager := services.NewLoungeManager(queries)
+
 	// Handlers
 	adminHandler := handlers.NewAdminHandler(cfg)
 	configHandler := handlers.NewConfigHandler(cfg)
 	sentryTunnelHandler := handlers.NewSentryTunnelHandler(cfg)
 	sessionHandler := handlers.NewSessionHandler(queries, authService, friendKeyService)
-	requestHandler := handlers.NewRequestHandler(queries, eventBroker)
+	requestHandler := handlers.NewRequestHandler(queries, eventBroker, loungeManager)
 	sseHandler := handlers.NewSSEHandler(eventBroker)
 	spotifyHandler := handlers.NewSpotifyHandler(spotifyService, queries)
-	youtubeHandler := handlers.NewYouTubeHandler(youtubeService, queries)
+	youtubeHandler := handlers.NewYouTubeHandler(youtubeService, loungeManager, queries)
 
 	// Rate limiter for search
 	searchRateLimiter := middleware.NewRateLimiter(cfg.RateLimitPerMinute)
@@ -99,6 +102,15 @@ func New(cfg *config.Config, queries *db.Queries, eventBroker *broker.Broker) ht
 				r.Get("/", sessionHandler.Get)
 				r.Put("/spotify/playlist", spotifyHandler.UpdatePlaylist)
 
+				// YouTube Lounge TV pairing (admin only)
+				r.Route("/youtube", func(r chi.Router) {
+					r.Use(middleware.AdminOnlyMiddleware)
+					r.Post("/pair", youtubeHandler.Pair)
+					r.Delete("/pair", youtubeHandler.Disconnect)
+					r.Post("/reconnect", youtubeHandler.Reconnect)
+					r.Get("/status", youtubeHandler.LoungeStatus)
+				})
+
 				// Admin-only settings routes
 				r.Route("/settings", func(r chi.Router) {
 					r.Use(middleware.AdminOnlyMiddleware)
@@ -126,6 +138,7 @@ func New(cfg *config.Config, queries *db.Queries, eventBroker *broker.Broker) ht
 						r.Use(middleware.AdminOnlyMiddleware)
 						r.Put("/approve", requestHandler.Approve)
 						r.Put("/reject", requestHandler.Reject)
+						r.Put("/play-next", requestHandler.PlayNext)
 					})
 				})
 			})

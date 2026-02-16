@@ -27,6 +27,9 @@ type Session struct {
 	UpdatedAt           sql.NullTime   `json:"updated_at"`
 	SpotifyPlaylistName sql.NullString `json:"spotify_playlist_name"`
 	MusicService        string         `json:"music_service"`
+	LoungeScreenID      sql.NullString `json:"lounge_screen_id"`
+	LoungeToken         sql.NullString `json:"lounge_token"`
+	LoungeScreenName    sql.NullString `json:"lounge_screen_name"`
 }
 
 type SongRequest struct {

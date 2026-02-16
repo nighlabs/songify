@@ -59,6 +59,7 @@ export interface YouTubeVideo {
   title: string
   channelTitle: string
   thumbnailUrl: string
+  durationMs: number
 }
 
 /**
@@ -85,6 +86,15 @@ export interface AuthState {
   isAdmin: boolean              // Whether user has admin privileges
   displayName: string | null    // Session display name
   friendAccessKey: string | null // Friend key (only set for admins)
+}
+
+/**
+ * YouTube TV Lounge connection status.
+ */
+export interface LoungeStatus {
+  status: 'connected' | 'disconnected' | 'error' | 'connecting'
+  screenName?: string
+  error?: string
 }
 
 // ----- API Request/Response Types -----

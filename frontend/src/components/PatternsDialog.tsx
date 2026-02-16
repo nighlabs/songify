@@ -30,6 +30,7 @@ interface PatternsDialogProps {
   onOpenChange: (open: boolean) => void
   sessionId: string
   patterns: ProhibitedPattern[]  // Current patterns from session
+  musicService: 'spotify' | 'youtube'
   onUpdate: () => void           // Called after adding/removing patterns
 }
 
@@ -38,9 +39,11 @@ export function PatternsDialog({
   onOpenChange,
   sessionId,
   patterns,
+  musicService,
   onUpdate,
 }: PatternsDialogProps) {
-  const [patternType, setPatternType] = useState<'artist' | 'title'>('artist')
+  const showArtist = musicService === 'spotify'
+  const [patternType, setPatternType] = useState<'artist' | 'title'>(showArtist ? 'artist' : 'title')
   const [pattern, setPattern] = useState('')
   const [adding, setAdding] = useState(false)
   const [deletingId, setDeletingId] = useState<number | null>(null)
@@ -88,29 +91,35 @@ export function PatternsDialog({
         <DialogHeader>
           <DialogTitle>Prohibition Patterns</DialogTitle>
           <DialogDescription>
-            Add patterns to filter out songs from search results. Songs with matching artist names or titles will be hidden.
+            {showArtist
+              ? 'Add patterns to filter out songs from search results. Songs with matching artist names or titles will be hidden.'
+              : 'Add patterns to filter out videos from search results. Videos with matching titles will be hidden.'}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           {/* Add new pattern form */}
           <div className="space-y-3">
-            <div className="flex gap-2">
-              <Button
-                variant={patternType === 'artist' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setPatternType('artist')}
-              >
-                Artist
-              </Button>
-              <Button
-                variant={patternType === 'title' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setPatternType('title')}
-              >
-                Title
-              </Button>
-            </div>
+            {showArtist ? (
+              <div className="flex gap-2">
+                <Button
+                  variant={patternType === 'artist' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setPatternType('artist')}
+                >
+                  Artist
+                </Button>
+                <Button
+                  variant={patternType === 'title' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setPatternType('title')}
+                >
+                  Title
+                </Button>
+              </div>
+            ) : (
+              <p className="text-sm font-medium text-muted-foreground">Title Pattern</p>
+            )}
             <div className="flex gap-2">
               <Input
                 placeholder={`Enter ${patternType} pattern...`}
@@ -132,7 +141,7 @@ export function PatternsDialog({
           {/* Existing patterns */}
           {patterns.length > 0 && (
             <div className="space-y-3 pt-2 border-t">
-              {artistPatterns.length > 0 && (
+              {showArtist && artistPatterns.length > 0 && (
                 <div>
                   <p className="text-sm font-medium mb-2">Artist Patterns</p>
                   <div className="flex flex-wrap gap-2">

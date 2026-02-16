@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -17,13 +18,14 @@ import (
 
 // RequestHandler manages song request operations: listing, submitting, and moderation.
 type RequestHandler struct {
-	queries *db.Queries
-	broker  *broker.Broker
+	queries       *db.Queries
+	broker        *broker.Broker
+	loungeManager *services.LoungeManager
 }
 
-// NewRequestHandler creates a RequestHandler with the given database queries and event broker.
-func NewRequestHandler(queries *db.Queries, broker *broker.Broker) *RequestHandler {
-	return &RequestHandler{queries: queries, broker: broker}
+// NewRequestHandler creates a RequestHandler with the given database queries, event broker, and lounge manager.
+func NewRequestHandler(queries *db.Queries, broker *broker.Broker, loungeManager *services.LoungeManager) *RequestHandler {
+	return &RequestHandler{queries: queries, broker: broker, loungeManager: loungeManager}
 }
 
 // List returns all song requests for the session, ordered by request time.
@@ -76,7 +78,7 @@ func (h *RequestHandler) Submit(w http.ResponseWriter, r *http.Request) {
 
 	// Check duration limit
 	if session.SongDurationLimitMs.Valid && req.DurationMS > session.SongDurationLimitMs.Int64 {
-		writeError(w, http.StatusBadRequest, "song exceeds duration limit")
+		writeError(w, http.StatusBadRequest, "Song exceeds duration limit")
 		return
 	}
 
@@ -86,7 +88,7 @@ func (h *RequestHandler) Submit(w http.ResponseWriter, r *http.Request) {
 		ExternalTrackID: req.ExternalTrackID,
 	})
 	if err == nil && isDuplicate == 1 {
-		writeError(w, http.StatusConflict, "song already requested")
+		writeError(w, http.StatusConflict, "Song already requested")
 		return
 	}
 
@@ -95,11 +97,11 @@ func (h *RequestHandler) Submit(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		for _, p := range patterns {
 			if p.PatternType == "artist" && containsIgnoreCase(req.ArtistNames, p.Pattern) {
-				writeError(w, http.StatusBadRequest, "artist is prohibited")
+				writeError(w, http.StatusBadRequest, "Artist is prohibited")
 				return
 			}
 			if p.PatternType == "title" && containsIgnoreCase(req.TrackName, p.Pattern) {
-				writeError(w, http.StatusBadRequest, "song title contains prohibited words")
+				writeError(w, http.StatusBadRequest, "Song title contains prohibited words")
 				return
 			}
 		}
@@ -164,12 +166,75 @@ func (h *RequestHandler) Approve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// If Lounge is connected, send addVideo before marking approved
+	loungeConnected := h.loungeManager.IsConnected(sessionID)
+	slog.Info("approve: lounge check", slog.String("session_id", sessionID), slog.Bool("lounge_connected", loungeConnected), slog.String("track_id", songRequest.ExternalTrackID))
+	if loungeConnected {
+		if err := h.loungeManager.SendAddVideo(sessionID, songRequest.ExternalTrackID); err != nil {
+			writeErrorWithCause(r.Context(), w, http.StatusBadGateway, "failed to send video to TV", err)
+			return
+		}
+	}
+
 	if err := h.queries.ApproveSongRequest(r.Context(), rid); err != nil {
 		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to approve request", err)
 		return
 	}
 
 	// Fetch updated request
+	updatedRequest, err := h.queries.GetSongRequestByID(r.Context(), rid)
+	if err != nil {
+		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to fetch updated request", err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, songRequestToResponse(updatedRequest))
+	h.broker.Publish(sessionID)
+}
+
+// PlayNext approves a song request and plays it immediately on the TV (admin only).
+func (h *RequestHandler) PlayNext(w http.ResponseWriter, r *http.Request) {
+	sessionID := chi.URLParam(r, "id")
+	requestID := chi.URLParam(r, "rid")
+	claims := middleware.GetClaims(r.Context())
+
+	if claims.SessionID != sessionID || claims.Role != services.RoleAdmin {
+		writeError(w, http.StatusForbidden, "admin access required")
+		return
+	}
+
+	rid, err := strconv.ParseInt(requestID, 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request ID")
+		return
+	}
+
+	songRequest, err := h.queries.GetSongRequestByID(r.Context(), rid)
+	if err != nil {
+		writeErrorWithCause(r.Context(), w, http.StatusNotFound, "request not found", err)
+		return
+	}
+
+	if songRequest.SessionID != sessionID {
+		writeError(w, http.StatusForbidden, "access denied")
+		return
+	}
+
+	// Send setVideo to play immediately on TV
+	loungeConnected := h.loungeManager.IsConnected(sessionID)
+	slog.Info("play-next: lounge check", slog.String("session_id", sessionID), slog.Bool("lounge_connected", loungeConnected), slog.String("track_id", songRequest.ExternalTrackID))
+	if loungeConnected {
+		if err := h.loungeManager.SendSetVideo(sessionID, songRequest.ExternalTrackID); err != nil {
+			writeErrorWithCause(r.Context(), w, http.StatusBadGateway, "failed to play video on TV", err)
+			return
+		}
+	}
+
+	if err := h.queries.ApproveSongRequest(r.Context(), rid); err != nil {
+		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to approve request", err)
+		return
+	}
+
 	updatedRequest, err := h.queries.GetSongRequestByID(r.Context(), rid)
 	if err != nil {
 		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to fetch updated request", err)
