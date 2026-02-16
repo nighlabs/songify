@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { SessionHeader } from './SessionHeader'
 import { SpotifyStatus } from './SpotifyStatus'
@@ -9,13 +9,14 @@ import { PendingRequests } from './PendingRequests'
 import { ProcessedRequests } from './ProcessedRequests'
 import { EmptyState } from './EmptyState'
 import { useAuthStore } from '@/stores/authStore'
-import { api } from '@/services/api'
 import {
   authenticateSpotify,
   isSpotifyAuthenticated,
   addTrackToPlaylist,
   tryRestoreSpotifySession,
 } from '@/services/spotify'
+import { useSortedRequests } from '@/hooks/useSortedRequests'
+import { useRequestMutations } from '@/hooks/useRequestMutations'
 import type { Session, SongRequest } from '@/types'
 
 export function SpotifySessionPage({
@@ -30,7 +31,6 @@ export function SpotifySessionPage({
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { isAdmin } = useAuthStore()
-  const [approveError, setApproveError] = useState<string | null>(null)
 
   // Restore Spotify session from localStorage token on page load
   useEffect(() => {
@@ -43,44 +43,24 @@ export function SpotifySessionPage({
     }
   }, [isAdmin, session.spotifyPlaylistId, queryClient, session.id])
 
-  const approveMutation = useMutation({
-    mutationFn: async (requestId: number) => {
-      // Block approval if playlist is linked but Spotify isn't connected
+  const { approveMutation, rejectMutation, approveError, setApproveError } = useRequestMutations({
+    sessionId: session.id,
+    onBeforeApprove: async (requestId) => {
       if (session.spotifyPlaylistId && !isSpotifyAuthenticated()) {
         throw new Error('Spotify connection required. Please reconnect to Spotify to approve songs.')
       }
 
       const request = requests.find((r) => r.id === requestId)
-
-      // Add to Spotify playlist first
       if (session.spotifyPlaylistId && isSpotifyAuthenticated() && request) {
         await addTrackToPlaylist(session.spotifyPlaylistId, request.externalUri)
       }
-
-      return api.approveSongRequest(session.id, requestId)
     },
-    onSuccess: () => {
-      setApproveError(null)
-      queryClient.invalidateQueries({ queryKey: ['requests', session.id] })
-      toast.success('Song approved')
-    },
-    onError: (error: Error) => {
+    onApproveError: (error) => {
       if (error.message.includes('Spotify connection required')) {
         setApproveError(error.message)
       } else {
         toast.error(error.message || 'Failed to approve song')
       }
-    },
-  })
-
-  const rejectMutation = useMutation({
-    mutationFn: (requestId: number) => api.rejectSongRequest(session.id, requestId),
-    onSuccess: () => {
-      toast.success('Song rejected')
-      queryClient.invalidateQueries({ queryKey: ['requests', session.id] })
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || 'Failed to reject song')
     },
   })
 
@@ -98,12 +78,7 @@ export function SpotifySessionPage({
     return `https://open.spotify.com/track/${request.externalTrackId}`
   }
 
-  const pendingRequests = requests
-    .filter((r) => r.status === 'pending')
-    .sort((a, b) => new Date(a.requestedAt).getTime() - new Date(b.requestedAt).getTime())
-  const processedRequests = requests
-    .filter((r) => r.status !== 'pending')
-    .sort((a, b) => new Date(b.processedAt ?? b.requestedAt).getTime() - new Date(a.processedAt ?? a.requestedAt).getTime())
+  const { pending: pendingRequests, processed: processedRequests } = useSortedRequests(requests)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-50 to-pink-50">

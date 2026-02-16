@@ -1,13 +1,14 @@
 import { useState, useMemo } from 'react'
-import { Search, X, Loader2, Plus, Ban } from 'lucide-react'
+import { Search, X, Loader2 } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { SearchResultItem } from './SearchResultItem'
 import { api } from '@/services/api'
 import type { Session, SpotifyTrack } from '@/types'
-import { formatDuration } from '@/lib/utils'
+import { getBlockReason } from '@/lib/blockReason'
 
 export function SpotifySearch({
   session,
@@ -40,27 +41,13 @@ export function SpotifySearch({
     },
   })
 
-  const getBlockReason = useMemo(() => {
-    return (track: SpotifyTrack): string | null => {
-      // Check duration limit
-      if (session.songDurationLimitMs && track.durationMs > session.songDurationLimitMs) {
-        return `Song exceeds ${formatDuration(session.songDurationLimitMs)} time limit`
-      }
-
-      // Check prohibited patterns (case-insensitive substring match)
-      for (const p of session.prohibitedPatterns || []) {
-        if (p.patternType === 'artist' &&
-            track.artists.some(a => a.toLowerCase().includes(p.pattern.toLowerCase()))) {
-          return `Artist matches prohibited pattern "${p.pattern}"`
-        }
-        if (p.patternType === 'title' &&
-            track.name.toLowerCase().includes(p.pattern.toLowerCase())) {
-          return `Title matches prohibited pattern "${p.pattern}"`
-        }
-      }
-
-      return null
-    }
+  const getTrackBlockReason = useMemo(() => {
+    return (track: SpotifyTrack): string | null =>
+      getBlockReason(
+        { title: track.name, artists: track.artists, durationMs: track.durationMs },
+        session.prohibitedPatterns,
+        session.songDurationLimitMs
+      )
   }, [session])
 
   const handleSearch = async () => {
@@ -191,71 +178,22 @@ export function SpotifySearch({
         {/* Search Results */}
         {searchResults.length > 0 && (
           <div className="mt-4 space-y-2">
-            {searchResults.map((track) => {
-              const blockReason = getBlockReason(track)
-              const isBlocked = blockReason !== null
-
-              return (
-                <div
-                  key={track.id}
-                  className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
-                    isBlocked
-                      ? 'bg-muted/30 opacity-60'
-                      : 'bg-muted/50 hover:bg-muted'
-                  }`}
-                >
-                  <a
-                    href={`https://open.spotify.com/track/${track.id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 min-w-0 hover:opacity-80 transition-opacity"
-                  >
-                    {track.albumArtUrl && (
-                      <img
-                        src={track.albumArtUrl}
-                        alt={track.albumName}
-                        className="w-12 h-12 rounded flex-shrink-0"
-                      />
-                    )}
-                    <div className="min-w-0">
-                      <p className="font-medium">{track.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {track.artists.join(', ')} • {track.albumName}
-                      </p>
-                    </div>
-                  </a>
-                  <span className="text-sm text-muted-foreground ml-auto flex-shrink-0">
-                    {formatDuration(track.durationMs)}
-                  </span>
-                  {isBlocked ? (
-                    <div
-                      className="relative group"
-                      title={blockReason}
-                    >
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        disabled
-                        className="text-muted-foreground cursor-not-allowed"
-                      >
-                        <Ban className="h-4 w-4" />
-                      </Button>
-                      <div className="absolute right-0 bottom-full mb-2 hidden group-hover:block w-48 p-2 text-xs bg-popover text-popover-foreground rounded-md shadow-md border z-10">
-                        {blockReason}
-                      </div>
-                    </div>
-                  ) : (
-                    <Button
-                      size="sm"
-                      onClick={() => submitMutation.mutate(track)}
-                      disabled={submitMutation.isPending}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              )
-            })}
+            {searchResults.map((track) => (
+              <SearchResultItem
+                key={track.id}
+                id={track.id}
+                title={track.name}
+                subtitle={`${track.artists.join(', ')} • ${track.albumName}`}
+                imageUrl={track.albumArtUrl}
+                imageAlt={track.albumName}
+                imageClassName="w-12 h-12 rounded"
+                externalUrl={`https://open.spotify.com/track/${track.id}`}
+                durationMs={track.durationMs}
+                blockReason={getTrackBlockReason(track)}
+                onSubmit={() => submitMutation.mutate(track)}
+                isSubmitting={submitMutation.isPending}
+              />
+            ))}
           </div>
         )}
       </CardContent>
