@@ -85,6 +85,7 @@ export interface AuthState {
   sessionId: string | null      // Current session ID
   isAdmin: boolean              // Whether user has admin privileges
   displayName: string | null    // Session display name
+  identity: string | null       // User's display identity (e.g., "Chris [PlusThree43]")
   friendAccessKey: string | null // Friend key (only set for admins)
 }
 
@@ -115,6 +116,7 @@ export interface CreateSessionRequest {
 export interface JoinSessionResponse {
   sessionId: string
   displayName: string
+  identity: string              // User's display identity (e.g., "Chris [PlusThree43]")
   token: string                 // JWT token for the friend
 }
 

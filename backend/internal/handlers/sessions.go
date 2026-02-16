@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -154,7 +155,17 @@ func (h *SessionHandler) Join(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	identity := h.friendKeyService.GenerateName()
+	generatedName := h.friendKeyService.GenerateName()
+	displayName := strings.TrimSpace(req.DisplayName)
+	var identity string
+	if displayName != "" {
+		if len(displayName) > 20 {
+			displayName = displayName[:20]
+		}
+		identity = displayName + " [" + generatedName + "]"
+	} else {
+		identity = generatedName
+	}
 	token, err := h.authService.GenerateToken(matchedSession.ID, services.RoleFriend, identity)
 	if err != nil {
 		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to generate token", err)
@@ -164,6 +175,7 @@ func (h *SessionHandler) Join(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, models.JoinSessionResponse{
 		SessionID:   matchedSession.ID,
 		DisplayName: matchedSession.DisplayName,
+		Identity:    identity,
 		Token:       token,
 	})
 }

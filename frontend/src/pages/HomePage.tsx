@@ -20,6 +20,7 @@ export function HomePage() {
   const navigate = useNavigate()
   const setFriendAuth = useAuthStore((state) => state.setFriendAuth)
   const [friendKey, setFriendKey] = useState('')
+  const [displayName, setDisplayName] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -38,8 +39,8 @@ export function HomePage() {
 
     try {
       const friendKeyHash = await hashFriendKey(sanitizedKey)
-      const response = await api.joinSession(friendKeyHash)
-      setFriendAuth(response.token, response.sessionId, response.displayName)
+      const response = await api.joinSession(friendKeyHash, displayName.trim() || undefined)
+      setFriendAuth(response.token, response.sessionId, response.displayName, response.identity)
       navigate(`/session/${response.sessionId}`)
     } catch {
       setError('Invalid access key. Please check and try again.')
@@ -82,6 +83,17 @@ export function HomePage() {
                   placeholder="e.g., happy-tiger-42"
                   value={friendKey}
                   onChange={(e) => setFriendKey(e.target.value)}
+                  className="text-center text-lg"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="displayName">Your Name (optional)</Label>
+                <Input
+                  id="displayName"
+                  placeholder="Leave blank for a random name"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  maxLength={20}
                   className="text-center text-lg"
                 />
               </div>

@@ -17,7 +17,7 @@ interface AuthStore extends AuthState {
   /** Set auth state after admin creates or rejoins a session */
   setAdminAuth: (token: string, sessionId: string, displayName: string, friendAccessKey: string) => void
   /** Set auth state after friend joins a session */
-  setFriendAuth: (token: string, sessionId: string, displayName: string) => void
+  setFriendAuth: (token: string, sessionId: string, displayName: string, identity: string) => void
   /** Clear all auth state on logout */
   logout: () => void
   /** Check if user has a valid token */
@@ -32,6 +32,7 @@ export const useAuthStore = create<AuthStore>()(
       sessionId: null,
       isAdmin: false,
       displayName: null,
+      identity: null,
       friendAccessKey: null,
 
       setAdminAuth: (token, sessionId, displayName, friendAccessKey) =>
@@ -40,15 +41,17 @@ export const useAuthStore = create<AuthStore>()(
           sessionId,
           isAdmin: true,
           displayName,
+          identity: null,
           friendAccessKey,
         }),
 
-      setFriendAuth: (token, sessionId, displayName) =>
+      setFriendAuth: (token, sessionId, displayName, identity) =>
         set({
           token,
           sessionId,
           isAdmin: false,
           displayName,
+          identity,
           friendAccessKey: null,
         }),
 
@@ -58,6 +61,7 @@ export const useAuthStore = create<AuthStore>()(
           sessionId: null,
           isAdmin: false,
           displayName: null,
+          identity: null,
           friendAccessKey: null,
         }),
 

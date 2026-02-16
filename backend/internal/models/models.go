@@ -40,12 +40,14 @@ type CreateSessionResponse struct {
 // shared friend key (hashed client-side).
 type JoinSessionRequest struct {
 	FriendKeyHash string `json:"friendKeyHash"`
+	DisplayName   string `json:"displayName,omitempty"`
 }
 
 // JoinSessionResponse returns session info and a JWT token for the friend.
 type JoinSessionResponse struct {
 	SessionID   string `json:"sessionId"`
 	DisplayName string `json:"displayName"`
+	Identity    string `json:"identity"`
 	Token       string `json:"token"`
 }
 
