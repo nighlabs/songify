@@ -33,7 +33,7 @@ func (h *RequestHandler) List(w http.ResponseWriter, r *http.Request) {
 	sessionID := chi.URLParam(r, "id")
 	claims := middleware.GetClaims(r.Context())
 
-	if claims.SessionID != sessionID {
+	if err := requireSession(claims, sessionID); err != nil {
 		writeError(w, http.StatusForbidden, "access denied")
 		return
 	}
@@ -58,7 +58,7 @@ func (h *RequestHandler) Submit(w http.ResponseWriter, r *http.Request) {
 	sessionID := chi.URLParam(r, "id")
 	claims := middleware.GetClaims(r.Context())
 
-	if claims.SessionID != sessionID {
+	if err := requireSession(claims, sessionID); err != nil {
 		writeError(w, http.StatusForbidden, "access denied")
 		return
 	}
@@ -143,7 +143,7 @@ func (h *RequestHandler) Approve(w http.ResponseWriter, r *http.Request) {
 	requestID := chi.URLParam(r, "rid")
 	claims := middleware.GetClaims(r.Context())
 
-	if claims.SessionID != sessionID || claims.Role != services.RoleAdmin {
+	if err := requireAdmin(claims, sessionID); err != nil {
 		writeError(w, http.StatusForbidden, "admin access required")
 		return
 	}
@@ -198,7 +198,7 @@ func (h *RequestHandler) PlayNext(w http.ResponseWriter, r *http.Request) {
 	requestID := chi.URLParam(r, "rid")
 	claims := middleware.GetClaims(r.Context())
 
-	if claims.SessionID != sessionID || claims.Role != services.RoleAdmin {
+	if err := requireAdmin(claims, sessionID); err != nil {
 		writeError(w, http.StatusForbidden, "admin access required")
 		return
 	}
@@ -251,7 +251,7 @@ func (h *RequestHandler) Reject(w http.ResponseWriter, r *http.Request) {
 	requestID := chi.URLParam(r, "rid")
 	claims := middleware.GetClaims(r.Context())
 
-	if claims.SessionID != sessionID || claims.Role != services.RoleAdmin {
+	if err := requireAdmin(claims, sessionID); err != nil {
 		writeError(w, http.StatusForbidden, "admin access required")
 		return
 	}
@@ -310,7 +310,7 @@ func (h *RequestHandler) ArchiveAll(w http.ResponseWriter, r *http.Request) {
 	sessionID := chi.URLParam(r, "id")
 	claims := middleware.GetClaims(r.Context())
 
-	if claims.SessionID != sessionID || claims.Role != services.RoleAdmin {
+	if err := requireAdmin(claims, sessionID); err != nil {
 		writeError(w, http.StatusForbidden, "admin access required")
 		return
 	}

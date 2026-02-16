@@ -59,7 +59,7 @@ func (h *YouTubeHandler) Pair(w http.ResponseWriter, r *http.Request) {
 	sessionID := chi.URLParam(r, "id")
 	claims := middleware.GetClaims(r.Context())
 
-	if claims.SessionID != sessionID || claims.Role != services.RoleAdmin {
+	if err := requireAdmin(claims, sessionID); err != nil {
 		writeError(w, http.StatusForbidden, "admin access required")
 		return
 	}
@@ -91,16 +91,7 @@ func (h *YouTubeHandler) Pair(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	status, screenName, errMsg := h.loungeManager.Status(sessionID)
-	resp := models.LoungeStatusResponse{Status: string(status)}
-	if screenName != "" {
-		resp.ScreenName = &screenName
-	}
-	if errMsg != "" {
-		resp.Error = &errMsg
-	}
-
-	writeJSON(w, http.StatusOK, resp)
+	writeJSON(w, http.StatusOK, h.buildLoungeStatusResponse(sessionID))
 }
 
 // Disconnect disconnects from a paired YouTube TV.
@@ -108,7 +99,7 @@ func (h *YouTubeHandler) Disconnect(w http.ResponseWriter, r *http.Request) {
 	sessionID := chi.URLParam(r, "id")
 	claims := middleware.GetClaims(r.Context())
 
-	if claims.SessionID != sessionID || claims.Role != services.RoleAdmin {
+	if err := requireAdmin(claims, sessionID); err != nil {
 		writeError(w, http.StatusForbidden, "admin access required")
 		return
 	}
@@ -122,7 +113,7 @@ func (h *YouTubeHandler) Reconnect(w http.ResponseWriter, r *http.Request) {
 	sessionID := chi.URLParam(r, "id")
 	claims := middleware.GetClaims(r.Context())
 
-	if claims.SessionID != sessionID || claims.Role != services.RoleAdmin {
+	if err := requireAdmin(claims, sessionID); err != nil {
 		writeError(w, http.StatusForbidden, "admin access required")
 		return
 	}
@@ -132,16 +123,7 @@ func (h *YouTubeHandler) Reconnect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	status, screenName, errMsg := h.loungeManager.Status(sessionID)
-	resp := models.LoungeStatusResponse{Status: string(status)}
-	if screenName != "" {
-		resp.ScreenName = &screenName
-	}
-	if errMsg != "" {
-		resp.Error = &errMsg
-	}
-
-	writeJSON(w, http.StatusOK, resp)
+	writeJSON(w, http.StatusOK, h.buildLoungeStatusResponse(sessionID))
 }
 
 // LoungeStatus returns the current YouTube TV connection status.
@@ -149,11 +131,15 @@ func (h *YouTubeHandler) LoungeStatus(w http.ResponseWriter, r *http.Request) {
 	sessionID := chi.URLParam(r, "id")
 	claims := middleware.GetClaims(r.Context())
 
-	if claims.SessionID != sessionID || claims.Role != services.RoleAdmin {
+	if err := requireAdmin(claims, sessionID); err != nil {
 		writeError(w, http.StatusForbidden, "admin access required")
 		return
 	}
 
+	writeJSON(w, http.StatusOK, h.buildLoungeStatusResponse(sessionID))
+}
+
+func (h *YouTubeHandler) buildLoungeStatusResponse(sessionID string) models.LoungeStatusResponse {
 	status, screenName, errMsg := h.loungeManager.Status(sessionID)
 	resp := models.LoungeStatusResponse{Status: string(status)}
 	if screenName != "" {
@@ -162,6 +148,5 @@ func (h *YouTubeHandler) LoungeStatus(w http.ResponseWriter, r *http.Request) {
 	if errMsg != "" {
 		resp.Error = &errMsg
 	}
-
-	writeJSON(w, http.StatusOK, resp)
+	return resp
 }

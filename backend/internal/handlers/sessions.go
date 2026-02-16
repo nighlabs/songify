@@ -270,7 +270,7 @@ func (h *SessionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	sessionID := chi.URLParam(r, "id")
 	claims := middleware.GetClaims(r.Context())
 
-	if claims.SessionID != sessionID {
+	if err := requireSession(claims, sessionID); err != nil {
 		writeError(w, http.StatusForbidden, "access denied")
 		return
 	}
@@ -327,12 +327,7 @@ func (h *SessionHandler) UpdateDurationLimit(w http.ResponseWriter, r *http.Requ
 	sessionID := chi.URLParam(r, "id")
 	claims := middleware.GetClaims(r.Context())
 
-	if claims.SessionID != sessionID {
-		writeError(w, http.StatusForbidden, "access denied")
-		return
-	}
-
-	if claims.Role != services.RoleAdmin {
+	if err := requireAdmin(claims, sessionID); err != nil {
 		writeError(w, http.StatusForbidden, "admin access required")
 		return
 	}
@@ -365,12 +360,7 @@ func (h *SessionHandler) GetProhibitedPatterns(w http.ResponseWriter, r *http.Re
 	sessionID := chi.URLParam(r, "id")
 	claims := middleware.GetClaims(r.Context())
 
-	if claims.SessionID != sessionID {
-		writeError(w, http.StatusForbidden, "access denied")
-		return
-	}
-
-	if claims.Role != services.RoleAdmin {
+	if err := requireAdmin(claims, sessionID); err != nil {
 		writeError(w, http.StatusForbidden, "admin access required")
 		return
 	}
@@ -398,12 +388,7 @@ func (h *SessionHandler) CreateProhibitedPattern(w http.ResponseWriter, r *http.
 	sessionID := chi.URLParam(r, "id")
 	claims := middleware.GetClaims(r.Context())
 
-	if claims.SessionID != sessionID {
-		writeError(w, http.StatusForbidden, "access denied")
-		return
-	}
-
-	if claims.Role != services.RoleAdmin {
+	if err := requireAdmin(claims, sessionID); err != nil {
 		writeError(w, http.StatusForbidden, "admin access required")
 		return
 	}
@@ -447,12 +432,7 @@ func (h *SessionHandler) DeleteProhibitedPattern(w http.ResponseWriter, r *http.
 	patternIDStr := chi.URLParam(r, "patternId")
 	claims := middleware.GetClaims(r.Context())
 
-	if claims.SessionID != sessionID {
-		writeError(w, http.StatusForbidden, "access denied")
-		return
-	}
-
-	if claims.Role != services.RoleAdmin {
+	if err := requireAdmin(claims, sessionID); err != nil {
 		writeError(w, http.StatusForbidden, "admin access required")
 		return
 	}

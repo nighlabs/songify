@@ -476,12 +476,7 @@ func createUpdateDurationLimitHandler(mock *mockQueries) http.HandlerFunc {
 		sessionID := chi.URLParam(r, "id")
 		claims := middleware.GetClaims(r.Context())
 
-		if claims.SessionID != sessionID {
-			writeError(w, http.StatusForbidden, "access denied")
-			return
-		}
-
-		if claims.Role != services.RoleAdmin {
+		if err := requireAdmin(claims, sessionID); err != nil {
 			writeError(w, http.StatusForbidden, "admin access required")
 			return
 		}
@@ -513,12 +508,7 @@ func createGetProhibitedPatternsHandler(mock *mockQueries) http.HandlerFunc {
 		sessionID := chi.URLParam(r, "id")
 		claims := middleware.GetClaims(r.Context())
 
-		if claims.SessionID != sessionID {
-			writeError(w, http.StatusForbidden, "access denied")
-			return
-		}
-
-		if claims.Role != services.RoleAdmin {
+		if err := requireAdmin(claims, sessionID); err != nil {
 			writeError(w, http.StatusForbidden, "admin access required")
 			return
 		}
@@ -547,12 +537,7 @@ func createCreateProhibitedPatternHandler(mock *mockQueries) http.HandlerFunc {
 		sessionID := chi.URLParam(r, "id")
 		claims := middleware.GetClaims(r.Context())
 
-		if claims.SessionID != sessionID {
-			writeError(w, http.StatusForbidden, "access denied")
-			return
-		}
-
-		if claims.Role != services.RoleAdmin {
+		if err := requireAdmin(claims, sessionID); err != nil {
 			writeError(w, http.StatusForbidden, "admin access required")
 			return
 		}
@@ -597,12 +582,7 @@ func createDeleteProhibitedPatternHandler(mock *mockQueries) http.HandlerFunc {
 		patternIDStr := chi.URLParam(r, "patternId")
 		claims := middleware.GetClaims(r.Context())
 
-		if claims.SessionID != sessionID {
-			writeError(w, http.StatusForbidden, "access denied")
-			return
-		}
-
-		if claims.Role != services.RoleAdmin {
+		if err := requireAdmin(claims, sessionID); err != nil {
 			writeError(w, http.StatusForbidden, "admin access required")
 			return
 		}
