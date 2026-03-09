@@ -3,7 +3,7 @@ module github.com/songify/backend
 go 1.25.5
 
 require (
-	github.com/getsentry/sentry-go v0.42.0
+	github.com/getsentry/sentry-go v0.43.0
 	github.com/go-chi/chi/v5 v5.2.5
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/golang-migrate/migrate/v4 v4.19.1
@@ -11,8 +11,8 @@ require (
 	github.com/mdobak/go-xerrors v1.0.0
 	github.com/tyler-smith/go-bip39 v1.1.0
 	golang.org/x/crypto v0.48.0
-	golang.org/x/time v0.14.0
-	modernc.org/sqlite v1.45.0
+	golang.org/x/time v0.15.0
+	modernc.org/sqlite v1.46.1
 )
 
 require (
