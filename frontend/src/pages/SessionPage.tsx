@@ -23,7 +23,7 @@ export function SessionPage() {
   }, [sessionId, id, navigate])
 
   // Session details
-  const { data: session, isLoading: sessionLoading } = useQuery<Session>({
+  const { data: session, isLoading: sessionLoading, isError: sessionError } = useQuery<Session>({
     queryKey: ['session', id],
     queryFn: () => api.getSession(id!),
     enabled: !!id,
@@ -44,6 +44,14 @@ export function SessionPage() {
     token,
     onFallbackToPolling: () => setUsePolling(true),
   })
+
+  // If the session query failed (e.g. expired JWT), redirect to home.
+  // The 401 handler in api.ts clears auth state, but this covers edge cases.
+  useEffect(() => {
+    if (sessionError) {
+      navigate('/')
+    }
+  }, [sessionError, navigate])
 
   if (sessionLoading || !session) {
     return (
