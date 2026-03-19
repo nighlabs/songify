@@ -14,38 +14,39 @@ export function SessionPage() {
   const { sessionId, token } = useAuthStore()
   const [usePolling, setUsePolling] = useState(false)
 
-  // Auth guard — inline check so we redirect before rendering the spinner.
-  // Using <Navigate> instead of useEffect avoids the render-then-redirect flash.
-  if (!sessionId || !token || sessionId !== id) {
-    return <Navigate to="/" replace />
-  }
+  const isAuthed = !!sessionId && !!token && sessionId === id
 
   // Session details — only fetch when we have valid auth state
   const { data: session, isLoading: sessionLoading, isError: sessionError } = useQuery<Session>({
     queryKey: ['session', id],
     queryFn: () => api.getSession(id!),
-    enabled: !!id && !!token,
+    enabled: !!id && isAuthed,
   })
 
   // Song requests with optional polling fallback
   const { data: requests = [], isLoading: requestsLoading } = useQuery<SongRequest[]>({
     queryKey: ['requests', id],
     queryFn: () => api.getSongRequests(id!),
-    enabled: !!id && !!token,
+    enabled: !!id && isAuthed,
     refetchInterval: usePolling ? 5000 : false,
     refetchIntervalInBackground: false,
   })
 
   // SSE for real-time updates (falls back to polling on repeated failures)
   useRequestsSSE({
-    sessionId: id,
-    token,
+    sessionId: isAuthed ? id : undefined,
+    token: isAuthed ? token : null,
     onFallbackToPolling: () => setUsePolling(true),
   })
 
+  // Auth guard — redirect when not authenticated. Placed after hooks to satisfy
+  // Rules of Hooks; queries/SSE are disabled via `enabled`/params when !isAuthed.
+  if (!isAuthed) {
+    return <Navigate to="/" replace />
+  }
+
   // If the session query failed (e.g. expired JWT cleared auth via 401 handler),
-  // redirect to home. This catches cases where the token was valid at render time
-  // but the backend rejected it.
+  // redirect to home.
   if (sessionError) {
     return <Navigate to="/" replace />
   }
