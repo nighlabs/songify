@@ -21,16 +21,18 @@ export function useRequestsSSE({ sessionId, token, onFallbackToPolling }: UseReq
   const failuresRef = useRef<number[]>([])
   const fallbackTriggeredRef = useRef(false)
   const esRef = useRef<EventSource | null>(null)
+  const cancelledRef = useRef(false)
   const onFallbackRef = useRef(onFallbackToPolling)
   useEffect(() => {
     onFallbackRef.current = onFallbackToPolling
   }, [onFallbackToPolling])
 
   useEffect(() => {
+    cancelledRef.current = false
     if (!sessionId || !token || fallbackTriggeredRef.current) return
 
     function connect() {
-      if (fallbackTriggeredRef.current) return
+      if (cancelledRef.current || fallbackTriggeredRef.current) return
 
       const url = `/api/sessions/${sessionId}/requests/stream?token=${encodeURIComponent(token!)}`
       const es = new EventSource(url)
@@ -59,8 +61,10 @@ export function useRequestsSSE({ sessionId, token, onFallbackToPolling }: UseReq
           return
         }
 
-        // Reconnect after a short delay
-        setTimeout(connect, 2000)
+        // Reconnect after a short delay unless the effect was cleaned up
+        setTimeout(() => {
+          if (!cancelledRef.current) connect()
+        }, 2000)
       }
     }
 
@@ -82,6 +86,7 @@ export function useRequestsSSE({ sessionId, token, onFallbackToPolling }: UseReq
     document.addEventListener('visibilitychange', handleVisibility)
 
     return () => {
+      cancelledRef.current = true
       document.removeEventListener('visibilitychange', handleVisibility)
       esRef.current?.close()
       esRef.current = null

@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useState } from 'react'
+import { useParams, Navigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { SpotifySessionPage } from '@/components/session/SpotifySessionPage'
@@ -11,29 +11,27 @@ import type { Session, SongRequest } from '@/types'
 
 export function SessionPage() {
   const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
   const { sessionId, token } = useAuthStore()
   const [usePolling, setUsePolling] = useState(false)
 
-  // Auth guard
-  useEffect(() => {
-    if (!sessionId || sessionId !== id) {
-      navigate('/')
-    }
-  }, [sessionId, id, navigate])
+  // Auth guard — inline check so we redirect before rendering the spinner.
+  // Using <Navigate> instead of useEffect avoids the render-then-redirect flash.
+  if (!sessionId || !token || sessionId !== id) {
+    return <Navigate to="/" replace />
+  }
 
-  // Session details
+  // Session details — only fetch when we have valid auth state
   const { data: session, isLoading: sessionLoading, isError: sessionError } = useQuery<Session>({
     queryKey: ['session', id],
     queryFn: () => api.getSession(id!),
-    enabled: !!id,
+    enabled: !!id && !!token,
   })
 
   // Song requests with optional polling fallback
   const { data: requests = [], isLoading: requestsLoading } = useQuery<SongRequest[]>({
     queryKey: ['requests', id],
     queryFn: () => api.getSongRequests(id!),
-    enabled: !!id,
+    enabled: !!id && !!token,
     refetchInterval: usePolling ? 5000 : false,
     refetchIntervalInBackground: false,
   })
@@ -45,13 +43,12 @@ export function SessionPage() {
     onFallbackToPolling: () => setUsePolling(true),
   })
 
-  // If the session query failed (e.g. expired JWT), redirect to home.
-  // The 401 handler in api.ts clears auth state, but this covers edge cases.
-  useEffect(() => {
-    if (sessionError) {
-      navigate('/')
-    }
-  }, [sessionError, navigate])
+  // If the session query failed (e.g. expired JWT cleared auth via 401 handler),
+  // redirect to home. This catches cases where the token was valid at render time
+  // but the backend rejected it.
+  if (sessionError) {
+    return <Navigate to="/" replace />
+  }
 
   if (sessionLoading || !session) {
     return (
