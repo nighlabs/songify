@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useState } from 'react'
+import { useParams, Navigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { SpotifySessionPage } from '@/components/session/SpotifySessionPage'
@@ -11,39 +11,45 @@ import type { Session, SongRequest } from '@/types'
 
 export function SessionPage() {
   const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
   const { sessionId, token } = useAuthStore()
   const [usePolling, setUsePolling] = useState(false)
 
-  // Auth guard
-  useEffect(() => {
-    if (!sessionId || sessionId !== id) {
-      navigate('/')
-    }
-  }, [sessionId, id, navigate])
+  const isAuthed = !!sessionId && !!token && sessionId === id
 
-  // Session details
-  const { data: session, isLoading: sessionLoading } = useQuery<Session>({
+  // Session details — only fetch when we have valid auth state
+  const { data: session, isLoading: sessionLoading, isError: sessionError } = useQuery<Session>({
     queryKey: ['session', id],
     queryFn: () => api.getSession(id!),
-    enabled: !!id,
+    enabled: !!id && isAuthed,
   })
 
   // Song requests with optional polling fallback
   const { data: requests = [], isLoading: requestsLoading } = useQuery<SongRequest[]>({
     queryKey: ['requests', id],
     queryFn: () => api.getSongRequests(id!),
-    enabled: !!id,
+    enabled: !!id && isAuthed,
     refetchInterval: usePolling ? 5000 : false,
     refetchIntervalInBackground: false,
   })
 
   // SSE for real-time updates (falls back to polling on repeated failures)
   useRequestsSSE({
-    sessionId: id,
-    token,
+    sessionId: isAuthed ? id : undefined,
+    token: isAuthed ? token : null,
     onFallbackToPolling: () => setUsePolling(true),
   })
+
+  // Auth guard — redirect when not authenticated. Placed after hooks to satisfy
+  // Rules of Hooks; queries/SSE are disabled via `enabled`/params when !isAuthed.
+  if (!isAuthed) {
+    return <Navigate to="/" replace />
+  }
+
+  // If the session query failed (e.g. expired JWT cleared auth via 401 handler),
+  // redirect to home.
+  if (sessionError) {
+    return <Navigate to="/" replace />
+  }
 
   if (sessionLoading || !session) {
     return (

@@ -67,6 +67,11 @@ async function request<T>(
       Sentry.captureException(apiError)
     }
 
+    // Expired or invalid JWT — clear auth state so the UI redirects to login
+    if (response.status === 401) {
+      useAuthStore.getState().logout()
+    }
+
     throw apiError
   }
 
