@@ -16,20 +16,22 @@ type ProhibitedPattern struct {
 }
 
 type Session struct {
-	ID                  string         `json:"id"`
-	DisplayName         string         `json:"display_name"`
-	AdminName           string         `json:"admin_name"`
-	AdminPasswordHash   string         `json:"admin_password_hash"`
-	FriendAccessKey     string         `json:"friend_access_key"`
-	SpotifyPlaylistID   sql.NullString `json:"spotify_playlist_id"`
-	SongDurationLimitMs sql.NullInt64  `json:"song_duration_limit_ms"`
-	CreatedAt           sql.NullTime   `json:"created_at"`
-	UpdatedAt           sql.NullTime   `json:"updated_at"`
-	SpotifyPlaylistName sql.NullString `json:"spotify_playlist_name"`
-	MusicService        string         `json:"music_service"`
-	LoungeScreenID      sql.NullString `json:"lounge_screen_id"`
-	LoungeToken         sql.NullString `json:"lounge_token"`
-	LoungeScreenName    sql.NullString `json:"lounge_screen_name"`
+	ID                        string         `json:"id"`
+	DisplayName               string         `json:"display_name"`
+	AdminName                 string         `json:"admin_name"`
+	AdminPasswordHash         string         `json:"admin_password_hash"`
+	FriendAccessKey           string         `json:"friend_access_key"`
+	SpotifyPlaylistID         sql.NullString `json:"spotify_playlist_id"`
+	SongDurationLimitMs       sql.NullInt64  `json:"song_duration_limit_ms"`
+	CreatedAt                 sql.NullTime   `json:"created_at"`
+	UpdatedAt                 sql.NullTime   `json:"updated_at"`
+	SpotifyPlaylistName       sql.NullString `json:"spotify_playlist_name"`
+	MusicService              string         `json:"music_service"`
+	LoungeScreenID            sql.NullString `json:"lounge_screen_id"`
+	LoungeToken               sql.NullString `json:"lounge_token"`
+	LoungeScreenName          sql.NullString `json:"lounge_screen_name"`
+	SpotifyAuthPersistEnabled int64          `json:"spotify_auth_persist_enabled"`
+	SpotifyAuthTokenEncrypted sql.NullString `json:"spotify_auth_token_encrypted"`
 }
 
 type SongRequest struct {

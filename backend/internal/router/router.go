@@ -111,6 +111,14 @@ func New(cfg *config.Config, queries *db.Queries, eventBroker *broker.Broker) ht
 				r.Get("/", sessionHandler.Get)
 				r.Put("/spotify/playlist", spotifyHandler.UpdatePlaylist)
 
+				// Admin-only: persist the admin's (client-side encrypted) Spotify auth token
+				r.Route("/spotify/auth", func(r chi.Router) {
+					r.Use(middleware.AdminOnlyMiddleware)
+					r.Get("/", spotifyHandler.GetAuthToken)
+					r.Put("/", spotifyHandler.SaveAuthToken)
+					r.Delete("/", spotifyHandler.ClearAuthToken)
+				})
+
 				// YouTube Lounge TV pairing (admin only)
 				r.Route("/youtube", func(r chi.Router) {
 					r.Use(middleware.AdminOnlyMiddleware)

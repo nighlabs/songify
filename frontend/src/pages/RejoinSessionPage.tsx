@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { api } from '@/services/api'
-import { hashPassword, hashFriendKey } from '@/services/crypto'
+import { hashPassword, hashFriendKey, deriveAndStoreTokenKey } from '@/services/crypto'
 import { useAuthStore } from '@/stores/authStore'
 
 export function RejoinSessionPage() {
@@ -47,6 +47,9 @@ export function RejoinSessionPage() {
     try {
       const friendKeyHash = await hashFriendKey(sanitizedKey)
       const passwordHash = await hashPassword(password, adminName)
+      // Derive the key used to decrypt a persisted Spotify token on this
+      // (possibly new) device, while the plaintext password is still in scope.
+      await deriveAndStoreTokenKey(password, adminName)
       const response = await api.rejoinSession(friendKeyHash, passwordHash)
 
       setAdminAuth(

@@ -14,6 +14,9 @@ import {
   isSpotifyAuthenticated,
   addTrackToPlaylist,
   tryRestoreSpotifySession,
+  hasStoredSpotifyToken,
+  restoreSpotifyTokenFromBackend,
+  persistSpotifyTokenIfEnabled,
 } from '@/services/spotify'
 import { useSortedRequests } from '@/hooks/useSortedRequests'
 import { useRequestMutations } from '@/hooks/useRequestMutations'
@@ -32,16 +35,35 @@ export function SpotifySessionPage({
   const queryClient = useQueryClient()
   const { isAdmin } = useAuthStore()
 
-  // Restore Spotify session from localStorage token on page load
+  const persistEnabled = !!session.spotifyAuthPersistEnabled
+
+  // Restore Spotify session on page load. If the admin opted in to persistence
+  // and this device has no local token yet (e.g. a new device), first pull the
+  // encrypted token down from the backend and decrypt it locally.
   useEffect(() => {
-    if (isAdmin && session.spotifyPlaylistId) {
-      tryRestoreSpotifySession(session.spotifyPlaylistId).then((restored) => {
-        if (restored) {
-          queryClient.invalidateQueries({ queryKey: ['session', session.id] })
-        }
-      })
+    if (!isAdmin) return
+    let cancelled = false
+
+    ;(async () => {
+      if (persistEnabled && !hasStoredSpotifyToken()) {
+        await restoreSpotifyTokenFromBackend(session.id)
+      }
+      if (cancelled) return
+
+      if (!hasStoredSpotifyToken() && !session.spotifyPlaylistId) return
+
+      const restored = await tryRestoreSpotifySession(session.spotifyPlaylistId)
+      if (cancelled || !restored) return
+
+      queryClient.invalidateQueries({ queryKey: ['session', session.id] })
+      // The SDK may have refreshed the token during restore; sync the latest up.
+      await persistSpotifyTokenIfEnabled(session.id, persistEnabled)
+    })()
+
+    return () => {
+      cancelled = true
     }
-  }, [isAdmin, session.spotifyPlaylistId, queryClient, session.id])
+  }, [isAdmin, session.spotifyPlaylistId, persistEnabled, queryClient, session.id])
 
   const { approveMutation, rejectMutation, approveError, setApproveError } = useRequestMutations({
     sessionId: session.id,

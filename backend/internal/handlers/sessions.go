@@ -304,6 +304,7 @@ func (h *SessionHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	if isAdmin {
 		resp.FriendAccessKey = session.FriendAccessKey
+		resp.SpotifyAuthPersistEnabled = session.SpotifyAuthPersistEnabled != 0
 	}
 
 	// Fetch prohibited patterns

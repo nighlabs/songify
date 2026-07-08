@@ -99,3 +99,86 @@ func (h *SpotifyHandler) UpdatePlaylist(w http.ResponseWriter, r *http.Request) 
 
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
+
+// GetAuthToken returns whether Spotify auth persistence is enabled for the session
+// and, if present, the encrypted token blob for the admin to decrypt client-side.
+func (h *SpotifyHandler) GetAuthToken(w http.ResponseWriter, r *http.Request) {
+	sessionID := chi.URLParam(r, "id")
+	claims := middleware.GetClaims(r.Context())
+
+	if err := requireAdmin(claims, sessionID); err != nil {
+		writeError(w, http.StatusForbidden, "admin access required")
+		return
+	}
+
+	row, err := h.queries.GetSpotifyAuthToken(r.Context(), sessionID)
+	if err != nil {
+		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to fetch spotify auth token", err)
+		return
+	}
+
+	resp := models.SpotifyAuthTokenResponse{Enabled: row.SpotifyAuthPersistEnabled != 0}
+	if row.SpotifyAuthTokenEncrypted.Valid {
+		resp.EncryptedToken = &row.SpotifyAuthTokenEncrypted.String
+	}
+
+	writeJSON(w, http.StatusOK, resp)
+}
+
+// SaveAuthToken enables Spotify auth persistence and stores the encrypted token
+// blob. The blob is opaque ciphertext; the server cannot decrypt it.
+func (h *SpotifyHandler) SaveAuthToken(w http.ResponseWriter, r *http.Request) {
+	sessionID := chi.URLParam(r, "id")
+	claims := middleware.GetClaims(r.Context())
+
+	if err := requireAdmin(claims, sessionID); err != nil {
+		writeError(w, http.StatusForbidden, "admin access required")
+		return
+	}
+
+	var req models.SaveSpotifyAuthTokenRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	var enabled int64
+	if req.Enabled {
+		enabled = 1
+	}
+
+	var encrypted sql.NullString
+	if req.EncryptedToken != nil && *req.EncryptedToken != "" {
+		encrypted = sql.NullString{String: *req.EncryptedToken, Valid: true}
+	}
+
+	err := h.queries.SaveSpotifyAuthToken(r.Context(), db.SaveSpotifyAuthTokenParams{
+		ID:                        sessionID,
+		SpotifyAuthPersistEnabled: enabled,
+		SpotifyAuthTokenEncrypted: encrypted,
+	})
+	if err != nil {
+		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to save spotify auth token", err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+// ClearAuthToken disables persistence and removes any stored encrypted token.
+func (h *SpotifyHandler) ClearAuthToken(w http.ResponseWriter, r *http.Request) {
+	sessionID := chi.URLParam(r, "id")
+	claims := middleware.GetClaims(r.Context())
+
+	if err := requireAdmin(claims, sessionID); err != nil {
+		writeError(w, http.StatusForbidden, "admin access required")
+		return
+	}
+
+	if err := h.queries.ClearSpotifyAuthToken(r.Context(), sessionID); err != nil {
+		writeErrorWithCause(r.Context(), w, http.StatusInternalServerError, "failed to clear spotify auth token", err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}

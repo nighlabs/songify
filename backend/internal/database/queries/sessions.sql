@@ -27,6 +27,15 @@ SELECT EXISTS(SELECT 1 FROM sessions WHERE friend_access_key = ?) AS exists_flag
 -- name: ListAllSessions :many
 SELECT * FROM sessions;
 
+-- name: SaveSpotifyAuthToken :exec
+UPDATE sessions SET spotify_auth_persist_enabled = ?, spotify_auth_token_encrypted = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?;
+
+-- name: ClearSpotifyAuthToken :exec
+UPDATE sessions SET spotify_auth_persist_enabled = 0, spotify_auth_token_encrypted = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?;
+
+-- name: GetSpotifyAuthToken :one
+SELECT spotify_auth_persist_enabled, spotify_auth_token_encrypted FROM sessions WHERE id = ?;
+
 -- name: SaveLoungeCredentials :exec
 UPDATE sessions SET lounge_screen_id = ?, lounge_token = ?, lounge_screen_name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?;
 

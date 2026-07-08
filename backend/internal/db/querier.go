@@ -12,6 +12,7 @@ import (
 type Querier interface {
 	ApproveSongRequest(ctx context.Context, id int64) error
 	ClearLoungeCredentials(ctx context.Context, id string) error
+	ClearSpotifyAuthToken(ctx context.Context, id string) error
 	CreateProhibitedPattern(ctx context.Context, arg CreateProhibitedPatternParams) (ProhibitedPattern, error)
 	CreateSession(ctx context.Context, arg CreateSessionParams) (Session, error)
 	CreateSongRequest(ctx context.Context, arg CreateSongRequestParams) (SongRequest, error)
@@ -30,10 +31,12 @@ type Querier interface {
 	GetSessionByID(ctx context.Context, id string) (Session, error)
 	GetSongRequestByID(ctx context.Context, id int64) (SongRequest, error)
 	GetSongRequestsBySessionID(ctx context.Context, sessionID string) ([]SongRequest, error)
+	GetSpotifyAuthToken(ctx context.Context, id string) (GetSpotifyAuthTokenRow, error)
 	IsDuplicateRequest(ctx context.Context, arg IsDuplicateRequestParams) (int64, error)
 	ListAllSessions(ctx context.Context) ([]Session, error)
 	RejectSongRequest(ctx context.Context, arg RejectSongRequestParams) error
 	SaveLoungeCredentials(ctx context.Context, arg SaveLoungeCredentialsParams) error
+	SaveSpotifyAuthToken(ctx context.Context, arg SaveSpotifyAuthTokenParams) error
 	UpdateSessionPlaylist(ctx context.Context, arg UpdateSessionPlaylistParams) error
 	UpdateSessionSettings(ctx context.Context, arg UpdateSessionSettingsParams) error
 }

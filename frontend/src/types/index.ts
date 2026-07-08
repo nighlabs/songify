@@ -27,6 +27,7 @@ export interface Session {
   spotifyPlaylistName?: string  // Linked Spotify playlist name for display
   songDurationLimitMs?: number  // Maximum song duration in milliseconds
   prohibitedPatterns?: ProhibitedPattern[]
+  spotifyAuthPersistEnabled?: boolean  // Admin opted in to persist their Spotify login to the backend
   createdAt: string
   isAdmin: boolean              // Whether the current user is an admin
 }

@@ -12,7 +12,7 @@ import * as Sentry from '@sentry/react'
 const SENSITIVE_HEADERS = ['authorization', 'cookie', 'set-cookie']
 
 /** localStorage keys whose values should never appear in breadcrumbs */
-const SENSITIVE_STORAGE_KEYS = ['songify-auth', 'spotify-sdk:']
+const SENSITIVE_STORAGE_KEYS = ['songify-auth', 'spotify-sdk:', 'songify-spotify-enc-key']
 
 /** Field names that indicate sensitive data in breadcrumb messages */
 const SENSITIVE_FIELD_NAMES = ['password', 'passwordHash', 'token', 'secret', 'friendKeyHash', 'adminPassword']

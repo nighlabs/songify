@@ -16,6 +16,14 @@
 
 import { SpotifyApi } from '@spotify/web-api-ts-sdk'
 import { getConfig, getCachedConfig } from './config'
+import { api } from './api'
+import { encryptToken, decryptToken, hasTokenKey, clearTokenKey } from './crypto'
+
+/** localStorage key the Spotify SDK uses to persist the auth token blob. */
+const TOKEN_KEY = 'spotify-sdk:AuthorizationCodeWithPKCEStrategy:token'
+
+/** Last token blob pushed to the backend, to skip redundant syncs after refreshes. */
+let lastSyncedTokenBlob: string | null = null
 
 /** OAuth callback URL - must match Spotify app settings */
 const REDIRECT_URI = `${window.location.origin}/callback`
@@ -77,7 +85,7 @@ export function isSpotifyAuthenticated(): boolean {
  * Used for quick check before attempting full session restore.
  */
 export function hasStoredSpotifyToken(): boolean {
-  return localStorage.getItem('spotify-sdk:AuthorizationCodeWithPKCEStrategy:token') !== null
+  return localStorage.getItem(TOKEN_KEY) !== null
 }
 
 /**
@@ -101,7 +109,7 @@ export async function tryRestoreSpotifySession(playlistId?: string): Promise<boo
       return true
     } catch {
       // Token expired, invalid, or playlist no longer accessible
-      localStorage.removeItem('spotify-sdk:AuthorizationCodeWithPKCEStrategy:token')
+      localStorage.removeItem(TOKEN_KEY)
       spotifyApi = null
       return false
     }
@@ -126,7 +134,7 @@ export async function tryRestoreSpotifySession(playlistId?: string): Promise<boo
   } catch (e) {
     console.error('Failed to restore Spotify session:', e)
     // Clear invalid token
-    localStorage.removeItem('spotify-sdk:AuthorizationCodeWithPKCEStrategy:token')
+    localStorage.removeItem(TOKEN_KEY)
     spotifyApi = null
     return false
   }
@@ -212,5 +220,84 @@ export async function handleSpotifyCallback(): Promise<void> {
  */
 export function logoutSpotify(): void {
   spotifyApi = null
-  localStorage.removeItem('spotify-sdk:AuthorizationCodeWithPKCEStrategy:token')
+  localStorage.removeItem(TOKEN_KEY)
+  clearTokenKey()
+  lastSyncedTokenBlob = null
+}
+
+/**
+ * Spotify token persistence (opt-in, admin only).
+ *
+ * When enabled, the admin's Spotify token blob is encrypted client-side and
+ * synced to the backend so it can follow them to another device. The backend
+ * only stores opaque ciphertext (see services/crypto.ts).
+ */
+
+/**
+ * Push the current local Spotify token to the backend if persistence is enabled.
+ * No-op when disabled, when no encryption key is available, when there is no
+ * local token yet, or when the blob is unchanged since the last sync.
+ */
+export async function persistSpotifyTokenIfEnabled(sessionId: string, enabled: boolean): Promise<void> {
+  if (!enabled || !hasTokenKey()) return
+
+  const blob = localStorage.getItem(TOKEN_KEY)
+  if (!blob || blob === lastSyncedTokenBlob) return
+
+  const cipher = await encryptToken(blob)
+  if (!cipher) return
+
+  try {
+    await api.saveSpotifyAuthToken(sessionId, true, cipher)
+    lastSyncedTokenBlob = blob
+  } catch (e) {
+    console.error('Failed to persist Spotify token:', e)
+  }
+}
+
+/**
+ * Turn on persistence for this session: encrypt the current local Spotify token
+ * (if the admin has connected already) and store it on the backend. When no
+ * token exists yet, persistence is still enabled and the blob is synced later
+ * once the admin connects Spotify.
+ */
+export async function enableSpotifyPersistence(sessionId: string): Promise<void> {
+  const blob = localStorage.getItem(TOKEN_KEY)
+  const cipher = blob ? await encryptToken(blob) : null
+  await api.saveSpotifyAuthToken(sessionId, true, cipher)
+  if (blob) lastSyncedTokenBlob = blob
+}
+
+/**
+ * Turn off persistence and clear any stored token from the backend.
+ */
+export async function disableSpotifyPersistence(sessionId: string): Promise<void> {
+  await api.clearSpotifyAuthToken(sessionId)
+  lastSyncedTokenBlob = null
+}
+
+/**
+ * Restore a persisted Spotify token from the backend into localStorage.
+ * Only runs when there is no local token yet and an encryption key is available
+ * (i.e. the admin just created/rejoined the session on this device).
+ *
+ * @returns true if a token was decrypted and written locally.
+ */
+export async function restoreSpotifyTokenFromBackend(sessionId: string): Promise<boolean> {
+  if (hasStoredSpotifyToken() || !hasTokenKey()) return false
+
+  try {
+    const { enabled, encryptedToken } = await api.getSpotifyAuthToken(sessionId)
+    if (!enabled || !encryptedToken) return false
+
+    const blob = await decryptToken(encryptedToken)
+    if (!blob) return false
+
+    localStorage.setItem(TOKEN_KEY, blob)
+    lastSyncedTokenBlob = blob
+    return true
+  } catch (e) {
+    console.error('Failed to restore Spotify token from backend:', e)
+    return false
+  }
 }

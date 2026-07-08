@@ -19,10 +19,19 @@ func (q *Queries) ClearLoungeCredentials(ctx context.Context, id string) error {
 	return err
 }
 
+const clearSpotifyAuthToken = `-- name: ClearSpotifyAuthToken :exec
+UPDATE sessions SET spotify_auth_persist_enabled = 0, spotify_auth_token_encrypted = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+`
+
+func (q *Queries) ClearSpotifyAuthToken(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, clearSpotifyAuthToken, id)
+	return err
+}
+
 const createSession = `-- name: CreateSession :one
 INSERT INTO sessions (id, display_name, admin_name, admin_password_hash, friend_access_key, spotify_playlist_id, song_duration_limit_ms, music_service)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-RETURNING id, display_name, admin_name, admin_password_hash, friend_access_key, spotify_playlist_id, song_duration_limit_ms, created_at, updated_at, spotify_playlist_name, music_service, lounge_screen_id, lounge_token, lounge_screen_name
+RETURNING id, display_name, admin_name, admin_password_hash, friend_access_key, spotify_playlist_id, song_duration_limit_ms, created_at, updated_at, spotify_playlist_name, music_service, lounge_screen_id, lounge_token, lounge_screen_name, spotify_auth_persist_enabled, spotify_auth_token_encrypted
 `
 
 type CreateSessionParams struct {
@@ -63,6 +72,8 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (S
 		&i.LoungeScreenID,
 		&i.LoungeToken,
 		&i.LoungeScreenName,
+		&i.SpotifyAuthPersistEnabled,
+		&i.SpotifyAuthTokenEncrypted,
 	)
 	return i, err
 }
@@ -105,7 +116,7 @@ func (q *Queries) GetLoungeCredentials(ctx context.Context, id string) (GetLoung
 }
 
 const getSessionByAdminCredentials = `-- name: GetSessionByAdminCredentials :one
-SELECT id, display_name, admin_name, admin_password_hash, friend_access_key, spotify_playlist_id, song_duration_limit_ms, created_at, updated_at, spotify_playlist_name, music_service, lounge_screen_id, lounge_token, lounge_screen_name FROM sessions WHERE admin_name = ? AND admin_password_hash = ?
+SELECT id, display_name, admin_name, admin_password_hash, friend_access_key, spotify_playlist_id, song_duration_limit_ms, created_at, updated_at, spotify_playlist_name, music_service, lounge_screen_id, lounge_token, lounge_screen_name, spotify_auth_persist_enabled, spotify_auth_token_encrypted FROM sessions WHERE admin_name = ? AND admin_password_hash = ?
 `
 
 type GetSessionByAdminCredentialsParams struct {
@@ -131,12 +142,14 @@ func (q *Queries) GetSessionByAdminCredentials(ctx context.Context, arg GetSessi
 		&i.LoungeScreenID,
 		&i.LoungeToken,
 		&i.LoungeScreenName,
+		&i.SpotifyAuthPersistEnabled,
+		&i.SpotifyAuthTokenEncrypted,
 	)
 	return i, err
 }
 
 const getSessionByFriendKey = `-- name: GetSessionByFriendKey :one
-SELECT id, display_name, admin_name, admin_password_hash, friend_access_key, spotify_playlist_id, song_duration_limit_ms, created_at, updated_at, spotify_playlist_name, music_service, lounge_screen_id, lounge_token, lounge_screen_name FROM sessions WHERE friend_access_key = ?
+SELECT id, display_name, admin_name, admin_password_hash, friend_access_key, spotify_playlist_id, song_duration_limit_ms, created_at, updated_at, spotify_playlist_name, music_service, lounge_screen_id, lounge_token, lounge_screen_name, spotify_auth_persist_enabled, spotify_auth_token_encrypted FROM sessions WHERE friend_access_key = ?
 `
 
 func (q *Queries) GetSessionByFriendKey(ctx context.Context, friendAccessKey string) (Session, error) {
@@ -157,12 +170,14 @@ func (q *Queries) GetSessionByFriendKey(ctx context.Context, friendAccessKey str
 		&i.LoungeScreenID,
 		&i.LoungeToken,
 		&i.LoungeScreenName,
+		&i.SpotifyAuthPersistEnabled,
+		&i.SpotifyAuthTokenEncrypted,
 	)
 	return i, err
 }
 
 const getSessionByID = `-- name: GetSessionByID :one
-SELECT id, display_name, admin_name, admin_password_hash, friend_access_key, spotify_playlist_id, song_duration_limit_ms, created_at, updated_at, spotify_playlist_name, music_service, lounge_screen_id, lounge_token, lounge_screen_name FROM sessions WHERE id = ?
+SELECT id, display_name, admin_name, admin_password_hash, friend_access_key, spotify_playlist_id, song_duration_limit_ms, created_at, updated_at, spotify_playlist_name, music_service, lounge_screen_id, lounge_token, lounge_screen_name, spotify_auth_persist_enabled, spotify_auth_token_encrypted FROM sessions WHERE id = ?
 `
 
 func (q *Queries) GetSessionByID(ctx context.Context, id string) (Session, error) {
@@ -183,12 +198,30 @@ func (q *Queries) GetSessionByID(ctx context.Context, id string) (Session, error
 		&i.LoungeScreenID,
 		&i.LoungeToken,
 		&i.LoungeScreenName,
+		&i.SpotifyAuthPersistEnabled,
+		&i.SpotifyAuthTokenEncrypted,
 	)
 	return i, err
 }
 
+const getSpotifyAuthToken = `-- name: GetSpotifyAuthToken :one
+SELECT spotify_auth_persist_enabled, spotify_auth_token_encrypted FROM sessions WHERE id = ?
+`
+
+type GetSpotifyAuthTokenRow struct {
+	SpotifyAuthPersistEnabled int64          `json:"spotify_auth_persist_enabled"`
+	SpotifyAuthTokenEncrypted sql.NullString `json:"spotify_auth_token_encrypted"`
+}
+
+func (q *Queries) GetSpotifyAuthToken(ctx context.Context, id string) (GetSpotifyAuthTokenRow, error) {
+	row := q.db.QueryRowContext(ctx, getSpotifyAuthToken, id)
+	var i GetSpotifyAuthTokenRow
+	err := row.Scan(&i.SpotifyAuthPersistEnabled, &i.SpotifyAuthTokenEncrypted)
+	return i, err
+}
+
 const listAllSessions = `-- name: ListAllSessions :many
-SELECT id, display_name, admin_name, admin_password_hash, friend_access_key, spotify_playlist_id, song_duration_limit_ms, created_at, updated_at, spotify_playlist_name, music_service, lounge_screen_id, lounge_token, lounge_screen_name FROM sessions
+SELECT id, display_name, admin_name, admin_password_hash, friend_access_key, spotify_playlist_id, song_duration_limit_ms, created_at, updated_at, spotify_playlist_name, music_service, lounge_screen_id, lounge_token, lounge_screen_name, spotify_auth_persist_enabled, spotify_auth_token_encrypted FROM sessions
 `
 
 func (q *Queries) ListAllSessions(ctx context.Context) ([]Session, error) {
@@ -215,6 +248,8 @@ func (q *Queries) ListAllSessions(ctx context.Context) ([]Session, error) {
 			&i.LoungeScreenID,
 			&i.LoungeToken,
 			&i.LoungeScreenName,
+			&i.SpotifyAuthPersistEnabled,
+			&i.SpotifyAuthTokenEncrypted,
 		); err != nil {
 			return nil, err
 		}
@@ -247,6 +282,21 @@ func (q *Queries) SaveLoungeCredentials(ctx context.Context, arg SaveLoungeCrede
 		arg.LoungeScreenName,
 		arg.ID,
 	)
+	return err
+}
+
+const saveSpotifyAuthToken = `-- name: SaveSpotifyAuthToken :exec
+UPDATE sessions SET spotify_auth_persist_enabled = ?, spotify_auth_token_encrypted = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+`
+
+type SaveSpotifyAuthTokenParams struct {
+	SpotifyAuthPersistEnabled int64          `json:"spotify_auth_persist_enabled"`
+	SpotifyAuthTokenEncrypted sql.NullString `json:"spotify_auth_token_encrypted"`
+	ID                        string         `json:"id"`
+}
+
+func (q *Queries) SaveSpotifyAuthToken(ctx context.Context, arg SaveSpotifyAuthTokenParams) error {
+	_, err := q.db.ExecContext(ctx, saveSpotifyAuthToken, arg.SpotifyAuthPersistEnabled, arg.SpotifyAuthTokenEncrypted, arg.ID)
 	return err
 }
 

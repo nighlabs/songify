@@ -10,11 +10,12 @@
  */
 
 import { useState, useRef, useCallback } from 'react'
-import { Settings, Clock, Ban, Trash2 } from 'lucide-react'
+import { Settings, Clock, Ban, Trash2, Cloud } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { TimeLimitDialog } from '@/components/TimeLimitDialog'
 import { PatternsDialog } from '@/components/PatternsDialog'
 import { ArchiveDialog } from '@/components/ArchiveDialog'
+import { SpotifyPersistDialog } from '@/components/SpotifyPersistDialog'
 import { useClickOutside } from '@/hooks/useClickOutside'
 import { formatDuration } from '@/lib/utils'
 import type { Session } from '@/types'
@@ -29,6 +30,7 @@ export function AdminSettings({ session, onSessionUpdate }: AdminSettingsProps) 
   const [timeLimitOpen, setTimeLimitOpen] = useState(false)
   const [patternsOpen, setPatternsOpen] = useState(false)
   const [archiveOpen, setArchiveOpen] = useState(false)
+  const [spotifyPersistOpen, setSpotifyPersistOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   useClickOutside(dropdownRef, useCallback(() => setDropdownOpen(false), []))
@@ -83,6 +85,23 @@ export function AdminSettings({ session, onSessionUpdate }: AdminSettingsProps) 
                 )}
               </div>
             </button>
+            {session.musicService === 'spotify' && (
+              <button
+                onClick={() => {
+                  setDropdownOpen(false)
+                  setSpotifyPersistOpen(true)
+                }}
+                className="flex items-center gap-2 px-3 py-2 w-full text-left hover:bg-muted transition-colors"
+              >
+                <Cloud className="h-4 w-4" />
+                <div>
+                  <span>Sync Spotify Login</span>
+                  {session.spotifyAuthPersistEnabled && (
+                    <p className="text-xs text-muted-foreground">Enabled</p>
+                  )}
+                </div>
+              </button>
+            )}
             <div className="border-t my-1" />
             <button
               onClick={() => {
@@ -121,6 +140,16 @@ export function AdminSettings({ session, onSessionUpdate }: AdminSettingsProps) 
         sessionId={session.id}
         onUpdate={onSessionUpdate}
       />
+
+      {session.musicService === 'spotify' && (
+        <SpotifyPersistDialog
+          open={spotifyPersistOpen}
+          onOpenChange={setSpotifyPersistOpen}
+          sessionId={session.id}
+          enabled={!!session.spotifyAuthPersistEnabled}
+          onUpdate={onSessionUpdate}
+        />
+      )}
     </>
   )
 }

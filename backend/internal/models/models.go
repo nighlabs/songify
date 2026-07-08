@@ -18,15 +18,15 @@ type VerifyAdminResponse struct {
 // CreateSessionRequest contains all parameters needed to create a new session.
 // Admins can optionally configure duration limits and prohibited patterns upfront.
 type CreateSessionRequest struct {
-	DisplayName              string   `json:"displayName"`
-	AdminName                string   `json:"adminName"`
-	AdminPasswordHash        string   `json:"adminPasswordHash"`
-	AdminPortalPasswordHash  string   `json:"adminPortalPasswordHash"`
-	MusicService             string   `json:"musicService,omitempty"`
-	SpotifyPlaylistID        *string  `json:"spotifyPlaylistId,omitempty"`
-	SongDurationLimitMs      *int64   `json:"songDurationLimitMs,omitempty"`
-	ProhibitedArtists        []string `json:"prohibitedArtists,omitempty"`
-	ProhibitedTitles         []string `json:"prohibitedTitles,omitempty"`
+	DisplayName             string   `json:"displayName"`
+	AdminName               string   `json:"adminName"`
+	AdminPasswordHash       string   `json:"adminPasswordHash"`
+	AdminPortalPasswordHash string   `json:"adminPortalPasswordHash"`
+	MusicService            string   `json:"musicService,omitempty"`
+	SpotifyPlaylistID       *string  `json:"spotifyPlaylistId,omitempty"`
+	SongDurationLimitMs     *int64   `json:"songDurationLimitMs,omitempty"`
+	ProhibitedArtists       []string `json:"prohibitedArtists,omitempty"`
+	ProhibitedTitles        []string `json:"prohibitedTitles,omitempty"`
 }
 
 // CreateSessionResponse returns the session ID, friend access key (for sharing),
@@ -71,17 +71,18 @@ type RejoinSessionResponse struct {
 // SessionResponse contains the full session state. Some fields like FriendAccessKey
 // and ProhibitedPatterns are only included for admin users.
 type SessionResponse struct {
-	ID                  string                      `json:"id"`
-	DisplayName         string                      `json:"displayName"`
-	AdminName           string                      `json:"adminName"`
-	MusicService        string                      `json:"musicService"`
-	FriendAccessKey     string                      `json:"friendAccessKey,omitempty"`
-	SpotifyPlaylistID   *string                     `json:"spotifyPlaylistId,omitempty"`
-	SpotifyPlaylistName *string                     `json:"spotifyPlaylistName,omitempty"`
-	SongDurationLimitMs *int64                      `json:"songDurationLimitMs,omitempty"`
-	ProhibitedPatterns  []ProhibitedPatternResponse `json:"prohibitedPatterns,omitempty"`
-	CreatedAt           time.Time                   `json:"createdAt"`
-	IsAdmin             bool                        `json:"isAdmin"`
+	ID                        string                      `json:"id"`
+	DisplayName               string                      `json:"displayName"`
+	AdminName                 string                      `json:"adminName"`
+	MusicService              string                      `json:"musicService"`
+	FriendAccessKey           string                      `json:"friendAccessKey,omitempty"`
+	SpotifyPlaylistID         *string                     `json:"spotifyPlaylistId,omitempty"`
+	SpotifyPlaylistName       *string                     `json:"spotifyPlaylistName,omitempty"`
+	SongDurationLimitMs       *int64                      `json:"songDurationLimitMs,omitempty"`
+	ProhibitedPatterns        []ProhibitedPatternResponse `json:"prohibitedPatterns,omitempty"`
+	SpotifyAuthPersistEnabled bool                        `json:"spotifyAuthPersistEnabled"`
+	CreatedAt                 time.Time                   `json:"createdAt"`
+	IsAdmin                   bool                        `json:"isAdmin"`
 }
 
 // SubmitSongRequestRequest contains the track metadata for a song request.
@@ -123,6 +124,22 @@ type RejectSongRequestRequest struct {
 type UpdatePlaylistRequest struct {
 	SpotifyPlaylistID   string `json:"spotifyPlaylistId"`
 	SpotifyPlaylistName string `json:"spotifyPlaylistName"`
+}
+
+// SaveSpotifyAuthTokenRequest persists (or updates) the admin's Spotify auth token.
+// The token blob is encrypted client-side with a key derived from the session
+// password, so the server only ever stores opaque ciphertext. EncryptedToken may
+// be nil when the admin enables persistence before connecting Spotify.
+type SaveSpotifyAuthTokenRequest struct {
+	Enabled        bool    `json:"enabled"`
+	EncryptedToken *string `json:"encryptedToken"`
+}
+
+// SpotifyAuthTokenResponse returns the persistence flag and, if present, the
+// stored ciphertext for the admin to decrypt client-side and restore locally.
+type SpotifyAuthTokenResponse struct {
+	Enabled        bool    `json:"enabled"`
+	EncryptedToken *string `json:"encryptedToken,omitempty"`
 }
 
 // SpotifySearchResponse wraps the track results from a Spotify search.
@@ -183,7 +200,7 @@ type PairLoungeRequest struct {
 
 // LoungeStatusResponse represents the current YouTube TV connection state.
 type LoungeStatusResponse struct {
-	Status     string  `json:"status"`              // connected/disconnected/error/connecting
+	Status     string  `json:"status"` // connected/disconnected/error/connecting
 	ScreenName *string `json:"screenName,omitempty"`
 	Error      *string `json:"error,omitempty"`
 }

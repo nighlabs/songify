@@ -253,6 +253,34 @@ export const api = {
     })
   },
 
+  // ----- Spotify Auth Persistence (admin only) -----
+
+  /** Get whether the admin's Spotify login is persisted, and the encrypted blob if so */
+  getSpotifyAuthToken: async (
+    sessionId: string
+  ): Promise<{ enabled: boolean; encryptedToken?: string }> => {
+    return request(`/sessions/${sessionId}/spotify/auth`)
+  },
+
+  /** Enable persistence and store the client-side-encrypted Spotify token blob */
+  saveSpotifyAuthToken: async (
+    sessionId: string,
+    enabled: boolean,
+    encryptedToken: string | null
+  ): Promise<void> => {
+    return request(`/sessions/${sessionId}/spotify/auth`, {
+      method: 'PUT',
+      body: JSON.stringify({ enabled, encryptedToken }),
+    })
+  },
+
+  /** Disable persistence and clear any stored Spotify token blob */
+  clearSpotifyAuthToken: async (sessionId: string): Promise<void> => {
+    return request(`/sessions/${sessionId}/spotify/auth`, {
+      method: 'DELETE',
+    })
+  },
+
   // ----- Session Settings -----
 
   /** Update the song duration limit (null to remove) */
