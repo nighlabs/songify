@@ -5,7 +5,7 @@
  * Useful for parties where you want to keep songs under a certain length.
  */
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -41,15 +41,18 @@ export function TimeLimitDialog({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    if (open && currentLimitMs) {
-      setMinutes(String(Math.floor(currentLimitMs / 60000)))
-      setSeconds(String(Math.floor((currentLimitMs % 60000) / 1000)))
-    } else if (open) {
-      setMinutes('')
-      setSeconds('')
+  // Reset the form when the dialog opens or the current limit changes.
+  // Done during render (not in an effect) to avoid cascading renders.
+  const [prevOpen, setPrevOpen] = useState(false)
+  const [prevLimitMs, setPrevLimitMs] = useState(currentLimitMs)
+  if (open !== prevOpen || currentLimitMs !== prevLimitMs) {
+    setPrevOpen(open)
+    setPrevLimitMs(currentLimitMs)
+    if (open) {
+      setMinutes(currentLimitMs ? String(Math.floor(currentLimitMs / 60000)) : '')
+      setSeconds(currentLimitMs ? String(Math.floor((currentLimitMs % 60000) / 1000)) : '')
     }
-  }, [open, currentLimitMs])
+  }
 
   const handleSave = async () => {
     setError('')
