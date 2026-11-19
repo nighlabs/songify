@@ -12,6 +12,11 @@ updates:
       go-all:
         patterns:
           - "*"
+      # Security updates ignore version-update groups unless grouped explicitly
+      go-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
 
   # Frontend npm dependencies
   - package-ecosystem: "npm"
@@ -23,6 +28,11 @@ updates:
       prefix: "deps(npm):"
     groups:
       npm-all:
+        patterns:
+          - "*"
+      # Security updates ignore version-update groups unless grouped explicitly
+      npm-security:
+        applies-to: security-updates
         patterns:
           - "*"
     ignore:
@@ -44,6 +54,11 @@ updates:
       actions-all:
         patterns:
           - "*"
+      # Security updates ignore version-update groups unless grouped explicitly
+      actions-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
 
   # Docker base images
   - package-ecosystem: "docker"
@@ -57,6 +72,11 @@ updates:
       docker-backend:
         patterns:
           - "*"
+      # Security updates ignore version-update groups unless grouped explicitly
+      docker-backend-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
 
   - package-ecosystem: "docker"
     directory: "/frontend"
@@ -67,5 +87,10 @@ updates:
       prefix: "deps(docker):"
     groups:
       docker-frontend:
+        patterns:
+          - "*"
+      # Security updates ignore version-update groups unless grouped explicitly
+      docker-frontend-security:
+        applies-to: security-updates
         patterns:
           - "*"
